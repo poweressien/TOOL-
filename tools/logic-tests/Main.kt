@@ -10,7 +10,7 @@ fun main() {
     println("font styles: ${fonts.size}")
     check("fonts >= 40", fonts.size >= 40)
     check("unique names", fonts.map { it.name }.toSet().size == fonts.size)
-    fun f(n: String) = fonts.first { it.name == n }.apply
+    fun f(n: String) = fonts.first { it.name == n }.transform
     check("bold", f("Bold")("Hello 123") == "𝐇𝐞𝐥𝐥𝐨 𝟏𝟐𝟑", f("Bold")("Hello 123"))
     check("script holes", f("Script")("Bog") == "ℬℴℊ", f("Script")("Bog"))
     check("double struck", f("Double Struck")("NRZ") == "ℕℝℤ", f("Double Struck")("NRZ"))
@@ -31,11 +31,11 @@ fun main() {
     check("black circles", f("Black Circles")("Ab") == "🅐🅑", f("Black Circles")("Ab"))
     // every style handles empty + full alphabet without throwing and changes the text
     fonts.forEach { st ->
-        val o = try { st.apply("The Quick Brown Fox 0123456789 jumps!") } catch (e: Exception) { "ERR " + e }
+        val o = try { st.transform("The Quick Brown Fox 0123456789 jumps!") } catch (e: Exception) { "ERR " + e }
         if (o.startsWith("ERR") || o.isEmpty()) check("style ${st.name}", false, o)
     }
-    check("all styles run", fonts.none { runCatching { it.apply("abcXYZ09") }.isFailure })
-    check("styles change text", fonts.count { it.apply("abc") != "abc" } >= fonts.size - 1)
+    check("all styles run", fonts.none { runCatching { it.transform("abcXYZ09") }.isFailure })
+    check("styles change text", fonts.count { it.transform("abc") != "abc" } >= fonts.size - 1)
 
     // ---------------- Site rules ----------------
     fun s(u: String) = SiteRules.analyze(u)

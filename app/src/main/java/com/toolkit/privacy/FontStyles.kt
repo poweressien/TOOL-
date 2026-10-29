@@ -1,6 +1,6 @@
 package com.toolkit.privacy
 
-data class FontStyle(val name: String, val group: String, val apply: (String) -> String)
+data class FontStyle(val name: String, val group: String, val transform: (String) -> String)
 
 /** Turns plain text into fancy Unicode "fonts" (they are real characters, so they paste anywhere: bios, captions, chats). */
 object FontStyles {

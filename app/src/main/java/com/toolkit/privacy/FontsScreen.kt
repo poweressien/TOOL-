@@ -32,7 +32,7 @@ fun FontsScreen() {
         }
         if (note.isNotEmpty()) item { Text(note, color = androidx.compose.ui.graphics.Color(0xFF43A047), style = MaterialTheme.typography.bodySmall) }
         items(styles, key = { it.name }) { st ->
-            val out = remember(text, st) { st.apply(text.ifEmpty { " " }) }
+            val out = remember(text, st) { st.transform(text.ifEmpty { " " }) }
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(st.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
