@@ -253,7 +253,7 @@ private fun ExposureCard(local: List<Section>, pub: Section?) {
         Triple("Time zone & language", Level.MEDIUM, "${TimeZone.getDefault().id} · ${Locale.getDefault().toLanguageTag()}"),
         Triple("Screen & hardware", Level.LOW, "Resolution and cores are visible to apps")
     )
-    val pts = items.sumOf { when (it.second) { Level.LOW -> 2; Level.MEDIUM -> 1; Level.HIGH -> 0 } }
+    val pts: Int = items.map { e -> when (e.second) { Level.LOW -> 2; Level.MEDIUM -> 1; Level.HIGH -> 0 } }.sum()
     val pct = pts * 100 / (items.size * 2)
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
