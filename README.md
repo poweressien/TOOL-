@@ -28,3 +28,4 @@ Or locally: `gradle assembleDebug` (JDK 17, Android SDK 34).
 ## Permissions you will be asked for
 Location (Wi-Fi scan list), Usage access (Data tab), All files access (Cleaner), VPN (VPN/Shield), Camera via system scanner (QR), Display over other apps (Site Guard bubble), Accessibility (optional, browser address bar only), Notifications, Call log + Calendar (Monitor, optional). Everything is processed on-device.
 # TOOL-
+# TOOL-

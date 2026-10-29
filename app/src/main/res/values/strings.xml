@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_desc">Reads only the address bar of web browsers so Site Guard can show how safe the page you are on is. It never reads page content, passwords or messages.</string>
+</resources>
