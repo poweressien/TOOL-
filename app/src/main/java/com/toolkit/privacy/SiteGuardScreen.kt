@@ -90,6 +90,22 @@ fun SiteGuardScreen(initial: String?, onConsumed: () -> Unit) {
             }
         }
         item {
+            var snap by remember { mutableStateOf(sp.getBoolean(Prefs.SG_SNAP, false)) }
+            var size by remember { mutableStateOf(sp.getInt(Prefs.SG_SIZE, 64)) }
+            var alpha by remember { mutableFloatStateOf(sp.getInt(Prefs.SG_ALPHA, 100).toFloat()) }
+            Section("Bubble controls", "Tap = panel with one-tap tools · Long-press = scan the link you copied · Drag = place it anywhere on screen") {
+                SwitchRow("Snap to the nearest screen edge", "Off = the bubble stays exactly where you drop it", snap) { snap = it; sp.edit().putBoolean(Prefs.SG_SNAP, it).apply() }
+                Text("Size", fontWeight = FontWeight.Medium)
+                ChipRow(listOf("Small", "Medium", "Large"), when (size) { 52 -> "Small"; 78 -> "Large"; else -> "Medium" }) { l ->
+                    size = when (l) { "Small" -> 52; "Large" -> 78; else -> 64 }
+                    sp.edit().putInt(Prefs.SG_SIZE, size).apply(); SiteGuardService.instance?.applyPrefs()
+                }
+                Text("Opacity ${alpha.toInt()}%", fontWeight = FontWeight.Medium)
+                Slider(alpha, { alpha = it }, valueRange = 30f..100f, onValueChangeFinished = { sp.edit().putInt(Prefs.SG_ALPHA, alpha.toInt()).apply(); SiteGuardService.instance?.applyPrefs() })
+                Hint("Panel tools: re-scan, scan copied link, check copied message for scams, find secrets in copied text, network info, public IP, ping, speed test, LAN scan, flashlight, battery & storage, save parking spot, QR scanner, device monitor.")
+            }
+        }
+        item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Auto-detect the site you're on", fontWeight = FontWeight.Bold)
@@ -98,7 +114,7 @@ fun SiteGuardScreen(initial: String?, onConsumed: () -> Unit) {
                         ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
                     SwitchRow("Scan automatically", "Off = only scan links you share or paste", auto) { auto = it; sp.edit().putBoolean(Prefs.SG_AUTO, it).apply() }
-                    Text("No accessibility? Share any link to Privacy Toolkit from your browser's Share menu, or paste it below.", style = MaterialTheme.typography.bodySmall)
+                    Text("No accessibility? Share any link to EKPE from your browser's Share menu, or paste it below.", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

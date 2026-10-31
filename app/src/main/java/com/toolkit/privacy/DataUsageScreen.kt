@@ -110,7 +110,7 @@ fun DataUsageScreen() {
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Android needs \"Usage access\" to show per-app data. Find Privacy Toolkit in the list and switch it on. Data stays on your phone.")
+                        Text("Android needs \"Usage access\" to show per-app data. Find EKPE in the list and switch it on. Data stays on your phone.")
                         Button(onClick = { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }) { Text("Open Usage access") }
                     }
                 }

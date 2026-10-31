@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block title %}Searching{% endblock %}
+{% block content %}
+<section class="hero small"><h1>Searching public sources…</h1><p class="lead">“{{ q }}”</p>
+<div class="spinner"></div><pre id="log" class="log">Starting…</pre><p id="err" class="bad-text"></p></section>
+{% endblock %}
+{% block scripts %}<script>
+startScan({q: {{ q|tojson }}, cat: {{ cat|tojson }}, mode: {{ mode|tojson }}, region: {{ region|tojson }}});
+</script>{% endblock %}

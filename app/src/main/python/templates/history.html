@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block title %}History{% endblock %}
+{% block content %}<section class="wrap"><h1>Search history</h1>
+<form class="inline" method="get"><input name="q" value="{{ q }}" placeholder="Filter past searches…"><button class="btn">Filter</button></form>
+{% if items %}{% set recent = items %}{% include "_recent.html" %}{% else %}<p class="muted">Nothing here yet.</p>{% endif %}</section>{% endblock %}

@@ -47,8 +47,10 @@ private fun doPing(host: String, ref: Array<Process?>, out: (String) -> Unit) {
     try {
         val p = ProcessBuilder("ping", "-c", "6", host).redirectErrorStream(true).start()
         ref[0] = p
-        p.inputStream.bufferedReader().useLines { it.forEach(out) }
+        val seen = ArrayList<String>()
+        p.inputStream.bufferedReader().useLines { it.forEach { l -> seen += l; out(l) } }
         p.waitFor()
+        ToolboxPlus.pingSummary(seen)?.let(out)
     } catch (e: Exception) {
         out("ping unavailable, measuring TCP latency to $host:443 instead")
         repeat(6) {
@@ -155,7 +157,7 @@ fun ToolboxScreen() {
     fun start() {
         job?.cancel(); lines.clear()
         val h = host.trim().removePrefix("https://").removePrefix("http://").substringBefore('/')
-        if (h.isEmpty()) return
+        if (h.isEmpty() && mode != "My IP") return
         running = true
         job = scope.launch(Dispatchers.IO) {
             try {
@@ -164,7 +166,8 @@ fun ToolboxScreen() {
                     "Trace" -> doTrace(h, procRef, ::emit)
                     "DNS" -> doDns(h, ::emit)
                     "Whois" -> doWhois(h, ::emit)
-                    else -> doPorts(h, ports, ::emit)
+                    "Ports" -> doPorts(h, ports, ::emit)
+                    else -> ToolboxPlus.run(ctx, mode, host.trim(), ports.trim(), ::emit)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -179,13 +182,33 @@ fun ToolboxScreen() {
     Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Network toolbox", style = MaterialTheme.typography.headlineSmall)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(listOf("Ping", "Trace", "DNS", "Whois", "Ports")) { m ->
+            items(listOf("Ping", "Trace", "DNS", "Whois", "Ports") + ToolboxPlus.MODES) { m ->
                 FilterChip(selected = mode == m, onClick = { mode = m }, label = { Text(m) })
             }
         }
         OutlinedTextField(host, { host = it }, label = { Text("Host / domain / IP") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         if (mode == "Ports") {
             OutlinedTextField(ports, { ports = it }, label = { Text("Ports (e.g. 22,80,443 or 1-100)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            ChipRow(listOf("Web", "Top 100", "1-1024", "Databases", "Remote access", "IoT"), "") { p ->
+                ports = when (p) {
+                    "Web" -> "80,443,8000,8080,8443,8888"
+                    "Top 100" -> PortDb.standard.take(100).joinToString(",")
+                    "1-1024" -> "1-1024"
+                    "Databases" -> "1433,1521,3306,5432,6379,9200,11211,27017"
+                    "Remote access" -> "22,23,3389,5900,5985,5555"
+                    else -> "1883,8123,554,8554,9100,631,8008,8009,62078"
+                }
+            }
+        }
+        if (mode == "TLS" || mode == "Banner" || mode == "Latency") {
+            OutlinedTextField(ports, { ports = it }, label = { Text("Port (default ${if (mode == "Banner") 80 else 443})") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        when (mode) {
+            "Subnet" -> Hint("Host box: CIDR such as 192.168.1.10/24")
+            "MAC" -> Hint("Host box: MAC address, e.g. AA:BB:CC:DD:EE:FF")
+            "WoL" -> Hint("Host box: MAC of the PC to wake (same Wi-Fi/LAN)")
+            "My IP" -> Hint("Shows your public IP, ISP, location and VPN hints. Host box is ignored.")
+            else -> {}
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(enabled = !running, onClick = { start() }) { Text("Run") }

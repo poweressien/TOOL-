@@ -21,7 +21,7 @@ fun ScamScreen(initial: String?, onConsumed: () -> Unit) {
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 14.dp)) {
         item { Text("Scam Message Check", style = MaterialTheme.typography.headlineSmall) }
-        item { Text("Paste an SMS, WhatsApp or email. Looks for fake bank alerts, OTP/BVN grabs, advance-fee tricks, fake prizes, risky links and more. You can also share a message straight to Privacy Toolkit.", style = MaterialTheme.typography.bodySmall) }
+        item { Text("Paste an SMS, WhatsApp or email. Looks for fake bank alerts, OTP/BVN grabs, advance-fee tricks, fake prizes, risky links and more. You can also share a message straight to EKPE.", style = MaterialTheme.typography.bodySmall) }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block title %}Searching{% endblock %}
+{% block content %}
+<section class="hero small"><h1>Scan in progress…</h1><p class="lead">“{{ row.value }}”</p>
+<div class="spinner"></div><pre id="log" class="log">Working…</pre><p id="err" class="bad-text"></p></section>
+{% endblock %}
+{% block scripts %}<script>pollJob({{ scan_id|tojson }}, true);</script>{% endblock %}

@@ -178,7 +178,7 @@ fun MockLocationScreen() {
             }
             if (msg.isNotEmpty()) Text(msg, color = MaterialTheme.colorScheme.error)
             Text(
-                "One-time setup: Developer options → Select mock location app → Privacy Toolkit.",
+                "One-time setup: Developer options → Select mock location app → EKPE.",
                 style = MaterialTheme.typography.bodySmall
             )
         }

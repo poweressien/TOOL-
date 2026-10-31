@@ -1,0 +1,8 @@
+{% macro kv(d, depth=0) %}
+{% if d is mapping %}<dl class="kv">{% for k, v in d.items() if v not in (None, '', [], {}) and k not in ('status',) %}
+<dt>{{ k.replace('_',' ') }}</dt><dd>{% if v is mapping %}{{ kv(v, depth+1) }}{% elif v is iterable and v is not string %}
+{% if v and v[0] is mapping %}{% for x in v %}<div class="sub">{{ kv(x, depth+1) }}</div>{% endfor %}{% else %}{% for x in v %}<span class="tag">{{ x }}</span>{% endfor %}{% endif %}
+{% elif v is sameas true %}<span class="tag good">yes</span>{% elif v is sameas false %}<span class="tag">no</span>
+{% elif v is string and v.startswith('http') %}<a href="{{ v|safe_url }}" target="_blank" rel="noopener noreferrer">{{ v }}</a>{% else %}{{ v }}{% endif %}</dd>{% endfor %}</dl>
+{% else %}{{ d }}{% endif %}
+{% endmacro %}

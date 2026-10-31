@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ SITE_NAME }}{% endblock %} · {{ SITE_NAME }}</title>
+<meta name="description" content="{{ SITE_TAGLINE }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔎</text></svg>">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="{{ url_for('home') }}"><span class="logo">◈</span> {{ SITE_NAME }}</a>
+  <nav>
+    <div class="dd"><button class="link" type="button">Categories ▾</button>
+      <div class="dd-menu">{% for c in CATEGORIES %}<a href="{{ url_for('category', cat=c.id) }}"><b>{{ c.icon }}</b> {{ c.name }}</a>{% endfor %}</div></div>
+    <a href="{{ url_for('history') }}">History</a>
+    <a href="{{ url_for('about') }}">About</a>
+    <button class="link" type="button" id="open-settings">⚙ API keys</button>
+  </nav>
+</header>
+<main>{% block content %}{% endblock %}</main>
+<footer>
+  <span>{{ SITE_NAME }} v{{ VERSION }} · public-source research only · robots.txt respected · no private or leaked data</span>
+  <span><a href="{{ url_for('about') }}">Limits &amp; ethics</a></span>
+</footer>
+
+<dialog id="settings">
+  <form method="dialog">
+    <h3>API keys <small>(optional, more reliable search)</small></h3>
+    <p class="muted">Stored only in this browser (localStorage) and sent per scan. Never saved on the server.</p>
+    <label>SerpAPI key <input type="password" data-key="serpapi" autocomplete="off"></label>
+    <label>Google CSE API key <input type="password" data-key="google_key" autocomplete="off"></label>
+    <label>Google CSE engine ID (cx) <input type="password" data-key="google_cx" autocomplete="off"></label>
+    <label>Brave Search key <input type="password" data-key="brave" autocomplete="off"></label>
+    <label>NumVerify key (phones) <input type="password" data-key="numverify" autocomplete="off"></label>
+    <div id="prov-test" class="muted"></div>
+    <div class="row"><button type="button" id="test-prov" class="btn ghost">Test providers</button>
+      <button type="button" id="clear-keys" class="btn ghost">Clear</button>
+      <button class="btn">Save</button></div>
+  </form>
+</dialog>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

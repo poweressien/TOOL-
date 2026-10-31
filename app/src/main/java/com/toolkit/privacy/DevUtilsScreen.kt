@@ -81,12 +81,12 @@ fun DevUtilsScreen() {
     Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Dev utilities", style = MaterialTheme.typography.headlineSmall)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(listOf("JSON", "Base64", "Hash", "URL", "Color", "Time / UUID")) { t ->
+            items(listOf("JSON", "Base64", "Hash", "URL", "Color", "Time / UUID", "More")) { t ->
                 FilterChip(selected = tool == t, onClick = { tool = t; output = "" }, label = { Text(t) })
             }
         }
 
-        if (tool != "Color" && tool != "Time / UUID") {
+        if (tool != "Color" && tool != "Time / UUID" && tool != "More") {
             OutlinedTextField(input, { input = it }, label = { Text("Input") }, textStyle = mono, modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp))
         }
 
@@ -161,6 +161,7 @@ fun DevUtilsScreen() {
                 }
                 Button(onClick = { copyText(ctx, hex) }) { Text("Copy $hex") }
             }
+            "More" -> DevPlusPanel()
             else -> {
                 Button(onClick = { uuids = (1..5).joinToString("\n") { UUID.randomUUID().toString() } }) { Text("Generate 5 UUIDs") }
                 if (uuids.isNotEmpty()) { Text(uuids, style = mono); TextButton(onClick = { copyText(ctx, uuids) }) { Text("Copy") } }

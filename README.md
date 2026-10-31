@@ -1,29 +1,43 @@
-# Privacy Toolkit (Android)
+# EKPE (Privacy Toolkit + EKPE suite) - v4.0, one app
 
-Bottom tabs and what is inside:
+This is **PrivacyToolkit v3.0 and EKPE v1.2 merged into a single Android app**. Nothing was removed from either one.
+The app name is **EKPE** and the launcher icon is your photo (see `branding/`).
 
-**Run** - localhost HTML runner (paste/import a single HTML file, real http://localhost origin, console, desktop mode).
+| | |
+|---|---|
+| App name | EKPE |
+| applicationId | `com.toolkit.privacy` |
+| minSdk / targetSdk | 26 / 34 |
+| Output file | `EKPE.apk` (debug build, signed with the fixed `app/ekpe.jks` key so each build installs over the last) |
 
-**Files** - Compress (smart/ZIP/GZIP/XZ, photos + video) · PDF (images<->PDF, merge, split) · Encrypt (AES-256-GCM + shredder) · Strip EXIF (remove GPS/camera metadata) · OCR (offline text from images) · Cleaner (biggest, duplicate and old files).
+## How the two apps are combined
+* **Main screen** = the Privacy Toolkit (Compose) with its 11 tabs: Run, Files, Network, Security, Tools, Assist, BioTrack, Price, Radio, Lens, Geo.
+* **New 12th tab "EKPE"** = the whole EKPE suite. Tap a card to open EKPE on that section:
+  Analyzer, Intel, Split, Fonts, Cloud, Clock, Tools, Radar, Guard (7 tools), Labs (8 tools).
+  The last tab of the EKPE bar, **"◀ Toolkit"**, brings you back to the main screen.
+* Same APK, same icon, same process. The EKPE Python engine (Intel, Script Lab) is bundled with Chaquopy.
+* Where both apps have a similar tool (Vault, Fonts, LAN, Radar/Radio, Audit, Sound/Noise, Network toolkit...) **both versions are kept**.
+  Their data does not clash (different Keystore aliases, file names, prefs and notification channels).
 
-**Network** - Signal (live bar + %) · Speed (live meter + speed test w/ upload, jitter, history) · Wi-Fi (analyzer, channel graph, best channel) · Toolbox (ping, traceroute, DNS, whois, port check) · Data (per-app Wi-Fi/mobile usage) · LAN (device + open-port scanner).
+## What changed technically
+* `app/src/main/java/com/toolkit/privacy/*` - Privacy Toolkit code, unchanged except: new `EkpeHub.kt`, the extra tab in `MainActivity.kt`,
+  and visible text that said "Privacy Toolkit" now says "EKPE".
+* `app/src/main/java/com/inwekobong/ekpe/*` - EKPE code, unchanged except `MainActivity.kt` (added the "◀ Toolkit" tab).
+* `app/src/main/python`, `app/src/main/assets/radar` - EKPE Python and radar assets, unchanged.
+* `AndroidManifest.xml` - union of both manifests (all permissions, all services, the `<queries>` block). EKPE's activity is no longer a launcher
+  entry; the main screen is the only launcher entry. EKPE's accessibility config was renamed to `ekpe_accessibility_config.xml` to avoid a name clash.
+* `app/build.gradle.kts` - both dependency lists merged, Chaquopy plugin added, fixed signing config, APK named `EKPE`.
+  Toolchain: AGP 8.5.2, Kotlin 2.0.20, Gradle 8.9, Chaquopy 17.2.0, Python 3.12.
+* ABIs: arm64-v8a, armeabi-v7a, x86_64.
 
-**Security** - VPN (WireGuard) · Shield (DNS tracker blocker) · Audit (app permission/tracker scan) · Passwords (generator, strength, breach check) · Vault (encrypted offline password vault with fingerprint unlock).
+## Build (GitHub Actions)
+1. Push the **contents of this folder** to a GitHub repo (the `.github` folder must be at the repo root).
+2. Actions tab -> "Build EKPE APK" (runs on every push, or press *Run workflow*).
+3. When green, open the run -> Artifacts -> **EKPE-apk** -> `EKPE.apk`. The **build-log** artifact and the run summary list any compile errors.
 
-**Tools** - QR (scan, generate, Wi-Fi QR) · Sensors (compass, level, barometer, light, magnetic, motion) · API (HTTP tester) · Dev (JSON, Base64, hashes, URL, color, UUID, timestamps) · Fonts (47 fancy Unicode styles, copy/share) · Info · Location (mock GPS for testing) · Preview.
+Locally: JDK 17, Android SDK 34, Python 3.12 on PATH, then `gradle assembleDebug`.
 
-**Assist** -
-- Site Guard: draggable floating circle gauge (1-100%, red/yellow/green) that scores the site you're on. Auto-detects browser URLs through an address-bar-only accessibility service, or scan via Share / paste. Checks: HTTPS + certificate, redirects, domain age (RDAP), look-alike/brand spoofing, scam words, shorteners, risky downloads.
-- Smart Scan: phone (format, country, Nigerian carrier prefix, scam hints) and email (syntax, disposable/typo, MX/SPF/DMARC, Gravatar, GitHub, domain age) plus one-tap web searches.
-- Scam Check: paste or share an SMS/WhatsApp/email to detect OTP/BVN grabs, advance-fee, fake prizes, risky links.
-- Monitor: foreground service with heads-up pop-ups for background apps, data drainers, weak/slow network, missed calls, calendar events, low battery/storage.
-- Bluetooth: live BLE + classic scan with signal/distance, paired and connected devices, maker, services, item-tracker (AirTag/Tile/SmartTag) alerts, and a "read device info" button (model, firmware, battery).
-- Smart Scan "Deep scan online": web footprint, scam reports in top results, Gravatar profile, domain registrar/IP/host.
-- Home: apps auto-sorted into folders (A-Z, most used, unused) with an optional launcher mode.
-
-## Build
-Push to GitHub. Actions tab -> latest run -> Artifacts -> PrivacyToolkit-debug.
-Or locally: `gradle assembleDebug` (JDK 17, Android SDK 34).
-
-## Permissions you will be asked for
-Location (Wi-Fi scan list), Usage access (Data tab), All files access (Cleaner), VPN (VPN/Shield), Camera via system scanner (QR), Display over other apps (Site Guard bubble), Accessibility (optional, browser address bar only), Notifications, Call log + Calendar (Monitor, optional). Everything is processed on-device.
+## Permissions to allow after install
+Location, Nearby devices, Phone, Contacts, SMS, Camera, Microphone, Notifications, Photos/Videos, overlay ("Display over other apps"),
+Usage access, Modify system settings. Turn on Bluetooth, Wi-Fi and Location for Radar. Details for each tool are in the two original READMEs:
+`README_PrivacyToolkit_original.md` and `README_EKPE_original.md`.

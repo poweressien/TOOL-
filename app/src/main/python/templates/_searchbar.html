@@ -1,0 +1,12 @@
+<form class="searchbar" action="{{ url_for('search') }}" method="get" autocomplete="off">
+  <div class="sb-main">
+    <select name="cat" aria-label="Category">{% for c in CATEGORIES %}<option value="{{ c.id }}" {{ 'selected' if c.id == cat }}>{{ c.icon }} {{ c.name }}</option>{% endfor %}</select>
+    <input name="q" value="{{ q or '' }}" placeholder="{{ placeholder or 'Search a name, phone, e-mail, domain, URL, @username, IP…' }}" required autofocus aria-label="Search">
+    <button class="btn" type="submit">Search</button>
+  </div>
+  <div class="sb-opts">
+    {% for m in MODE_LIST %}<label class="pill"><input type="radio" name="mode" value="{{ m.id }}" {{ 'checked' if m.id == mode }}><span title="{{ m.help }}">{{ m.label }}</span></label>{% endfor %}
+    <input name="region" maxlength="2" placeholder="Region (NG)" class="region" aria-label="Phone region">
+    <span id="detected" class="muted"></span>
+  </div>
+</form>

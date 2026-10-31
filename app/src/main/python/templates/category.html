@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block title %}{{ info.name }}{% endblock %}
+{% block content %}
+<section class="hero small">
+  <div class="crumbs"><a href="{{ url_for('home') }}">Home</a> / {{ info.name }}</div>
+  <h1>{{ info.icon }} {{ info.name }} search</h1>
+  <p class="lead">{{ info.desc }}</p>
+  {% set q = '' %}{% set placeholder = 'e.g. ' ~ info.example %}{% include "_searchbar.html" %}
+  <div class="chips">Example: <a href="{{ url_for('search', q=info.example, cat=cat) }}">{{ info.example }}</a></div>
+</section>
+<section class="wrap"><h2>Other categories</h2>
+  <div class="chips big">{% for c in CATEGORIES if c.id != cat %}<a href="{{ url_for('category', cat=c.id) }}">{{ c.icon }} {{ c.name }}</a>{% endfor %}</div></section>
+{% if recent %}<section class="wrap"><h2>Recent searches</h2>{% include "_recent.html" %}</section>{% endif %}
+{% endblock %}

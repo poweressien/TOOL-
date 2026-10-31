@@ -1,4 +1,4 @@
-name: Build APK
+name: Build EKPE APK
 on:
   push:
   workflow_dispatch:
@@ -11,6 +11,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # Chaquopy (the on-device Python used by EKPE Intel / Script Lab) needs a build-time Python 3.12
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
@@ -23,6 +27,8 @@ jobs:
           grep -E "^e: |error:|FAILED|What went wrong" -A2 build.log | head -80 >> $GITHUB_STEP_SUMMARY
           grep -E "^e: " build.log | head -40
           exit $code
+      - name: Name the APK
+        run: cp app/build/outputs/apk/debug/*.apk EKPE.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -30,5 +36,5 @@ jobs:
           path: build.log
       - uses: actions/upload-artifact@v4
         with:
-          name: PrivacyToolkit-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: EKPE-apk
+          path: EKPE.apk

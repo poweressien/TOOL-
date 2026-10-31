@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% from "_kv.html" import kv %}
+{% block title %}{{ r.input }}{% endblock %}
+{% set ex = r.extras or {} %}
+{% set en = r.enrichment or {} %}
+{% block content %}
+<section class="resulthead">
+  <div class="wrap">
+    <div class="crumbs"><a href="{{ url_for('home') }}">Home</a> / <a href="{{ url_for('category', cat=(r.type if r.type in ['phone','email','domain','url','username','ip','number'] else 'person' if r.type=='person_or_company' else 'all')) }}">{{ r.type.replace('_',' ') }}</a></div>
+    {% set q = r.input %}{% set cat = 'all' %}{% set mode = r.mode %}{% set placeholder = 'Search again…' %}{% include "_searchbar.html" %}
+    <div class="titlebar">
+      <div><h1>{{ r.input }}</h1><p class="lead">{{ r.narrative.headline }}</p>
+        <div class="muted">{{ r.type.replace('_',' ') }} · {{ r.mode }} scan · {{ r.seconds }}s · {{ r.searches_run }} searches · {{ r.ranked_results|length }} results from {{ stats.domains }} domains · {{ stats.extras_ok }} extra data sources</div></div>
+      <div class="gauges">
+        <div class="gauge {{ r.confidence.label|band_class }}"><b>{{ r.confidence.score }}</b><span>confidence</span></div>
+        <div class="gauge {{ {'low':'good','medium':'mid','high':'bad'}.get(r.risk.risk_level,'mid') }}"><b>{{ r.risk.risk_level|title }}</b><span>risk signals</span></div>
+        <div class="gauge neutral"><b>{{ stats.direct }}</b><span>direct evidence</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap layout">
+<nav class="side" id="side">
+  <a href="#overview">Overview</a>
+  <a href="#entities">Entities &amp; claims</a>
+  <a href="#evidence">Evidence <i>{{ r.ranked_results|length }}</i></a>
+  <a href="#trail">Search trail <i>{{ r.trail|length }}</i></a>
+  {% if ex.news or ex.images or ex.hackernews or ex.mentions or ex.wikidata or r.wikipedia.status=='ok' %}<a href="#web">News &amp; web</a>{% endif %}
+  {% if ex.username_presence or ex.github or ex.gravatar or ex.github_orgs %}<a href="#handles">Profiles &amp; handles</a>{% endif %}
+  {% if en or ex.tls or ex.archive or ex.site_files %}<a href="#technical">Technical data</a>{% endif %}
+  <a href="#risk">Risk &amp; security</a>
+  <a href="#export">Export</a>
+</nav>
+
+<div class="panels">
+<!-- ============ OVERVIEW -->
+<section id="overview" class="panel">
+  <h2>Overview</h2>
+  {% for e in r.errors %}<div class="alert warn">{{ e }}</div>{% endfor %}
+  {% if r.diagnostics.degraded %}<div class="alert bad">Search providers returned no usable results (rate limiting is likely). Retry in a minute or add SerpAPI / Google CSE / Brave keys in ⚙ API keys.</div>{% endif %}
+  {% for p in r.narrative.paragraphs %}<p>{{ p }}</p>{% endfor %}
+  <div class="three">
+    <div class="card"><h4>Key findings</h4><ul>{% for x in r.narrative.key_findings %}<li>{{ x }}</li>{% else %}<li class="muted">None</li>{% endfor %}</ul></div>
+    <div class="card"><h4>Limitations</h4><ul>{% for x in r.narrative.limitations %}<li>{{ x }}</li>{% else %}<li class="muted">None</li>{% endfor %}</ul></div>
+    <div class="card"><h4>Suggested next steps</h4><ul>{% for x in r.narrative.next_steps %}<li>{{ x }}</li>{% else %}<li class="muted">None</li>{% endfor %}</ul></div>
+  </div>
+  {% if r.mode != 'deep' %}<div class="alert info">Want more? <a href="{{ url_for('search', q=r.input, mode='deep', fresh=1) }}">Re-run as a Deep scan</a>: 18 queries × 15 results, pivot searches, page verification, official-site probing and look-alike domain checks.</div>{% endif %}
+  <details><summary>How the confidence score was built</summary>
+    <table><tr><th>Factor</th><th>Value</th></tr>{% for f in r.confidence.factors %}<tr><td>{{ f.factor }}</td><td>{{ f.value }}</td></tr>{% endfor %}</table>
+    <p class="muted">60% strength of the main claim · 25% search coverage · 15% verifiable technical data. A “nothing public found” outcome is capped at 40.</p></details>
+  {% if r.usage %}<h3>Likely use / context</h3><div class="chips">{% for u in r.usage %}<span class="tag">{{ u.label }}</span>{% endfor %}</div>{% endif %}
+</section>
+
+<!-- ============ ENTITIES -->
+<section id="entities" class="panel">
+  <h2>Entities &amp; claims</h2>
+  {% for c in r.claims %}
+  <div class="claim"><span class="score {{ c.confidence_label|band_class }}">{{ c.confidence }}</span>
+    <div><b>{{ c.claim }}</b><div class="muted">{{ c.independent_sources }} independent source(s){% if c.caveat %} · {{ c.caveat }}{% endif %}</div>
+    {% if c.support %}<details><summary>Supporting sources</summary>{% for u in c.support %}<div><a href="{{ u|safe_url }}" target="_blank" rel="noopener noreferrer">{{ u }}</a></div>{% endfor %}</details>{% endif %}</div></div>
+  {% else %}<p class="muted">No claims could be made from the available public evidence.</p>{% endfor %}
+
+  {% for e in r.entities %}
+  <article class="card entity">
+    <header><div><h3>{{ e.name }}</h3>
+      <span class="tag blue">{{ e.type }}</span><span class="tag">{{ e.independent_sources }} independent source(s)</span>
+      {% for m in e.methods[:4] %}<span class="tag">{{ m }}</span>{% endfor %}{% if e.contested %}<span class="tag warn">contested</span>{% endif %}</div>
+      <span class="score {{ e.confidence_label|band_class }}">{{ e.confidence }}</span></header>
+    {% if e.aliases %}<p class="muted">Also written as: {{ e.aliases|join(', ') }}</p>{% endif %}
+    {% if e.roles or e.employers %}<p class="muted">Roles: {{ e.roles|join(', ') or '-' }} · Employers mentioned: {{ e.employers|join(', ') or '-' }}</p>{% endif %}
+    {% if e.profile %}{% set p = e.profile %}
+    <div class="profile">
+      <div>
+        {% if p.website %}<p><b>Website:</b> <a href="{{ p.website|safe_url }}" target="_blank" rel="noopener noreferrer">{{ p.official_domain }}</a></p>{% endif %}
+        {% if p.description %}<p>{{ p.description }}</p>{% endif %}
+        {% for label, val in [('Legal name', p.legal_name), ('Founded', p.founded), ('Address', p.address), ('Country', p.country), ('Industries', p.industries|join(', ')), ('E-mail', p.emails|join(', ')), ('Phone', p.phones|join(', ')), ('Technologies', p.technologies|join(', '))] if val %}<p><b>{{ label }}:</b> {{ val }}</p>{% endfor %}
+        {% if p.social %}<p><b>Profiles:</b> {% for pl, u in p.social.items() %}<a href="{{ u|safe_url }}" target="_blank" rel="noopener noreferrer">{{ pl }}</a>{{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
+        {% if e.official_site_confirms is sameas true %}<div class="alert good">The entity's own website publishes the searched value, the strongest corroboration.</div>
+        {% elif e.official_site_confirms is sameas false %}<div class="alert warn">The entity's own pages do not show the searched value.</div>{% endif %}
+      </div>
+      <div><div class="muted">Profile completeness {{ p.completeness }}%</div><div class="bar"><i style="width: {{ p.completeness }}%"></i></div>
+        <div class="muted">Corroboration</div>{% for label, ok in p.corroboration.items() %}<span class="tag {{ 'good' if ok }}">{{ '✓' if ok else '·' }} {{ label }}</span>{% endfor %}</div>
+    </div>{% endif %}
+    <details><summary>Evidence &amp; confidence factors</summary>
+      <table><tr><th>Factor</th><th>Value</th></tr>{% for f in e.confidence_factors %}<tr><td>{{ f.get('factor', f.get('name','')) }}</td><td>{{ f.get('value','') }}</td></tr>{% endfor %}</table>
+      {% for ev in e.evidence %}<div class="ev"><a href="{{ ev.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ ev.title or ev.url }}</a> <span class="muted">{{ ev.method }} · score {{ ev.result_score }}</span><div>{{ ev.snippet }}</div></div>{% endfor %}</details>
+    <p class="muted">Seen on: {{ e.source_domains|join(', ') }}</p>
+  </article>
+  {% endfor %}
+  {% set pc = r.public_contacts or {} %}
+  {% if pc.emails or pc.phones or pc.social or pc.addresses %}<h3>Public contact points published by the entity</h3>
+  {% for key, title in [('emails','E-mail'),('phones','Phone'),('addresses','Address')] if pc.get(key) %}<p><b>{{ title }}:</b> {% for x in pc[key] %}<span class="tag">{{ x.value }}</span>{% endfor %}</p>{% endfor %}
+  {% if pc.social %}<p><b>Social:</b> {% for x in pc.social %}<a class="tag" href="{{ x.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ x.platform }}</a>{% endfor %}</p>{% endif %}{% endif %}
+</section>
+
+<!-- ============ EVIDENCE -->
+<section id="evidence" class="panel">
+  <h2>Evidence <small class="muted">{{ r.ranked_results|length }} public results</small></h2>
+  <div class="filters">
+    <input id="f-text" placeholder="Filter by text or domain…">
+    <select id="f-src"><option value="">All source types</option>{% for s in r.ranked_results|map(attribute='source')|unique|sort %}<option>{{ s }}</option>{% endfor %}</select>
+    <select id="f-lvl"><option value="">All evidence levels</option><option>direct</option><option>contextual</option><option>weak</option></select>
+    <label>min score <input id="f-min" type="range" min="0" max="100" value="0"><b id="f-min-v">0</b></label>
+    <span class="muted" id="f-count"></span>
+  </div>
+  <div id="results">
+  {% for it in r.ranked_results %}
+  <article class="res" data-src="{{ it.source }}" data-lvl="{{ it.evidence_level }}" data-score="{{ it.score }}" data-text="{{ (it.title ~ ' ' ~ it.domain ~ ' ' ~ it.snippet)|lower }}">
+    <div class="dom">{{ it.domain }} <span class="tag {{ {'direct':'good','contextual':'mid'}.get(it.evidence_level,'') }}">{{ it.evidence_level }}</span> <span class="tag">{{ it.source }}</span> <span class="tag">score {{ it.score }}</span>{% for rs in it.reasons[:3] %}<span class="tag dim">{{ rs }}</span>{% endfor %}</div>
+    <a class="rt" href="{{ it.link|safe_url }}" target="_blank" rel="noopener noreferrer">{{ it.title or it.link }}</a>
+    <p>{{ it.snippet }}</p><p class="muted">{{ it.explanation }}</p>
+    <details><summary>Score breakdown · found by {{ it.queries|length }} quer{{ 'y' if it.queries|length==1 else 'ies' }} via {{ it.providers|join(', ') }}</summary>
+      <table><tr><th>Signal</th><th>Points</th><th>Note</th></tr>{% for b in it.score_breakdown %}<tr><td>{{ b.get('signal', b.get('factor','')) }}</td><td>{{ b.get('points', b.get('value','')) }}</td><td>{{ b.get('note', b.get('detail','')) }}</td></tr>{% endfor %}</table>
+      {% for c in (it.page or {}).get('contexts', []) %}<blockquote>{{ c }}</blockquote>{% endfor %}
+      <div class="muted">Queries: {{ it.queries|join(' · ') }}</div></details>
+  </article>
+  {% else %}<p class="muted">No public results to show.</p>{% endfor %}
+  </div>
+</section>
+
+<!-- ============ SEARCH TRAIL -->
+<section id="trail" class="panel">
+  <h2>Search trail <small class="muted">exactly what was searched</small></h2>
+  <div class="three">
+    <div class="card stat"><b>{{ r.searches_run }}</b><span>queries planned</span></div>
+    <div class="card stat"><b>{{ r.trail|length }}</b><span>engine calls</span></div>
+    <div class="card stat"><b>{{ r.trail|sum(attribute='results') }}</b><span>raw results returned</span></div>
+  </div>
+  <h3>Engines</h3>
+  <table><tr><th>Provider</th><th>Queries</th><th>OK</th><th>Errors</th><th>Results</th><th>Last error</th></tr>
+  {% for name, d in (r.diagnostics.providers or {}).items() if d.queries %}<tr><td>{{ name }}</td><td>{{ d.queries }}</td><td>{{ d.ok }}</td><td>{{ d.errors }}</td><td>{{ d.results }}</td><td class="muted">{{ d.last_error }}</td></tr>{% endfor %}</table>
+  <h3>Every query</h3>
+  <table class="wide"><tr><th>#</th><th>Query</th><th>Purpose</th><th>Engine</th><th>Results</th><th>Top domains</th><th>Time</th></tr>
+  {% for t in r.trail %}<tr class="{{ 'rowerr' if t.error }}"><td>{{ loop.index }}</td><td><code>{{ t.query }}</code></td><td>{{ t.purpose }}</td><td>{{ t.provider }}</td><td>{{ t.results }}{% if t.error %} ⚠{% endif %}</td><td class="muted">{{ t.top_domains|join(', ') }}</td><td>{{ t.seconds }}s</td></tr>
+  {% else %}{% for q in r.queries %}<tr><td>{{ loop.index }}</td><td><code>{{ q.query }}</code></td><td>{{ q.purpose }}</td><td></td><td></td><td></td><td></td></tr>{% endfor %}{% endfor %}</table>
+  {% if r.site_probes %}<h3>Official sites probed</h3>{% for d, sp in r.site_probes.items() %}<div class="card"><b>{{ d }}</b><div class="muted">{{ sp.pages|length }} pages fetched</div>{% for u in sp.pages %}<div><a href="{{ u|safe_url }}" target="_blank" rel="noopener noreferrer">{{ u }}</a></div>{% endfor %}</div>{% endfor %}{% endif %}
+</section>
+
+<!-- ============ NEWS & WEB -->
+{% if ex.news or ex.images or ex.hackernews or ex.mentions or ex.wikidata or r.wikipedia.status=='ok' %}
+<section id="web" class="panel">
+  <h2>News &amp; web</h2>
+  {% if r.wikipedia.status=='ok' %}<div class="card"><h3>Wikipedia: {{ r.wikipedia.title }}</h3><p class="muted">{{ r.wikipedia.description }}</p><p>{{ r.wikipedia.summary }}</p><p class="muted">{{ r.wikipedia.note }} <a href="{{ r.wikipedia.url|safe_url }}" target="_blank" rel="noopener noreferrer">Read more</a></p></div>{% endif %}
+  {% if ex.wikidata and ex.wikidata.status=='ok' %}<h3>Wikidata</h3>{% for w in ex.wikidata['items'] %}<div class="row-item static"><a href="{{ w.url|safe_url }}" target="_blank" rel="noopener noreferrer"><b>{{ w.label }}</b></a><span class="muted grow">{{ w.description }}</span>{% if w.official_website %}<a class="tag" href="{{ w.official_website|safe_url }}" target="_blank" rel="noopener noreferrer">website</a>{% endif %}{% if w.inception %}<span class="tag">est. {{ w.inception }}</span>{% endif %}</div>{% endfor %}{% endif %}
+  {% if ex.news and ex.news.status=='ok' %}<h3>Recent news</h3>{% for n in ex.news['items'] %}<article class="res"><div class="dom">{{ n.source }} · {{ n.date }}</div><a class="rt" href="{{ n.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ n.title }}</a><p>{{ n.snippet }}</p></article>{% endfor %}{% endif %}
+  {% if ex.images and ex.images.status=='ok' %}<h3>Images from the public web</h3><div class="imgs">{% for i in ex.images['items'] %}<a href="{{ i.page|safe_url }}" target="_blank" rel="noopener noreferrer" title="{{ i.title }}"><img loading="lazy" referrerpolicy="no-referrer" src="{{ i.thumbnail|safe_url }}" alt="{{ i.title }}"></a>{% endfor %}</div><p class="muted">Thumbnails link to their source pages. Match to the right person or organisation yourself.</p>{% endif %}
+  {% if ex.hackernews and ex.hackernews.status=='ok' %}<h3>Hacker News <small class="muted">{{ ex.hackernews.total }} mentions</small></h3>{% for h in ex.hackernews['items'] %}<div class="row-item static"><a href="{{ h.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ h.title or 'comment' }}</a><span class="muted grow">{{ h.author }}</span><span class="muted">{{ h.date }}</span></div>{% endfor %}{% endif %}
+  {% if ex.mentions and ex.mentions.status=='ok' %}<h3>Other sites mentioning the domain</h3>{% for m in ex.mentions['items'] %}<article class="res"><a class="rt" href="{{ m.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ m.title or m.url }}</a><p class="muted">{{ m.snippet }}</p></article>{% endfor %}{% endif %}
+</section>{% endif %}
+
+<!-- ============ HANDLES -->
+{% if ex.username_presence or ex.github or ex.gravatar or ex.github_orgs %}
+<section id="handles" class="panel">
+  <h2>Profiles &amp; handles</h2>
+  {% if ex.github and ex.github.status=='ok' %}{% set g = ex.github %}<div class="card profilecard">{% if g.avatar %}<img src="{{ g.avatar|safe_url }}" alt="" referrerpolicy="no-referrer">{% endif %}<div><h3><a href="{{ g.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ g.name or g.login }}</a> <small class="muted">@{{ g.login }} · {{ g.type }}</small></h3><p>{{ g.bio }}</p>
+    <p class="muted">{{ g.company }} {{ g.location }} · {{ g.followers }} followers · {{ g.public_repos }} repos · since {{ g.created }}{% if g.blog %} · <a href="{{ ('https://' ~ g.blog if not g.blog.startswith('http') else g.blog)|safe_url }}" target="_blank" rel="noopener noreferrer">{{ g.blog }}</a>{% endif %}</p>
+    {% for rp in g.repos %}<div><a href="{{ rp.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ rp.name }}</a> <span class="tag">{{ rp.language or '-' }}</span> ★{{ rp.stars }} <span class="muted">{{ rp.description }}</span></div>{% endfor %}</div></div>{% endif %}
+  {% if ex.gravatar and ex.gravatar.status=='ok' %}{% set g = ex.gravatar %}<div class="card profilecard">{% if g.avatar %}<img src="{{ g.avatar|safe_url }}" alt="" referrerpolicy="no-referrer">{% endif %}<div><h3>Public Gravatar: {{ g.display_name }}</h3><p>{{ g.about }}</p><p class="muted">{{ g.location }}</p>{% for a in g.accounts %}<a class="tag" href="{{ a.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ a.service }}</a>{% endfor %}</div></div>{% endif %}
+  {% if ex.github_orgs and ex.github_orgs.status=='ok' %}<h3>GitHub organisations with a similar name</h3>{% for o in ex.github_orgs['items'] %}<a class="tag" href="{{ o.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ o.login }}</a>{% endfor %}{% endif %}
+  {% if ex.username_presence and ex.username_presence.status=='ok' %}{% set u = ex.username_presence %}
+  <h3>Handle presence <small class="muted">{{ u.found|length }} of {{ u.checked }} platforms</small></h3>
+  <div class="chips">{% for f in u.found %}<a class="tag good" href="{{ f.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ f.platform }}</a>{% else %}<span class="muted">No public profile found on the checked platforms.</span>{% endfor %}</div>
+  <p class="muted">{{ u.not_found }} confirmed absent · {{ u.unknown }} could not be checked. {{ u.caveat }}</p>{% endif %}
+</section>{% endif %}
+
+<!-- ============ TECHNICAL -->
+{% if en or ex.tls or ex.archive or ex.site_files %}
+<section id="technical" class="panel">
+  <h2>Technical data</h2>
+  {% set ph = en.phone %}
+  {% if ph %}<h3>Phone number</h3>{% if ph.status=='ok' %}<div class="three"><div class="card stat"><b>{{ ph.international }}</b><span>international</span></div><div class="card stat"><b>{{ ph.country }}</b><span>{{ ph.location }}</span></div><div class="card stat"><b>{{ ph.type }}</b><span>{{ 'valid' if ph.is_valid else 'not valid' }}</span></div></div>{{ kv({'e164': ph.e164, 'national': ph.national, 'region': ph.region, 'carrier_original': ph.carrier_original, 'timezones': ph.timezones, 'validity_note': ph.validity_note}) }}<p class="muted">{{ ph.caveat }}</p>{% else %}<div class="alert warn">{{ ph.note }}</div>{% endif %}{% endif %}
+  {% if en.location %}<div class="card"><b>Location hint:</b> {{ en.location.value }} <span class="muted">({{ en.location.confidence }}% · {{ en.location.basis }})</span></div>{% endif %}
+  {% for key, title in [('numverify','NumVerify'),('email','E-mail'),('url','URL analysis'),('registration','Domain registration (RDAP / WHOIS)'),('dns','DNS &amp; mail posture'),('website','Website fingerprint'),('ip','IP / network'),('certificates','Certificate transparency'),('wayback','Web archive (first snapshot)')] if en.get(key) %}
+  <details{{ ' open' if key in ['registration','email','url','dns','ip'] }}><summary>{{ title|safe }}</summary>{{ kv(en[key]) }}</details>{% endfor %}
+  {% if ex.tls and ex.tls.status=='ok' %}<details open><summary>TLS certificate</summary>{{ kv(ex.tls) }}</details>{% endif %}
+  {% if ex.archive and ex.archive.status=='ok' %}<details open><summary>Archive timeline</summary><p>Captured {{ ex.archive.months_captured }} months between {{ ex.archive.first }} and {{ ex.archive.last }}.</p>
+    <div class="spark">{% set mx = ex.archive.by_year.values()|max %}{% for y, n in ex.archive.by_year.items() %}<div title="{{ y }}: {{ n }} months"><i style="height: {{ (n / mx * 100)|round }}%"></i><span>{{ y[2:] }}</span></div>{% endfor %}</div></details>{% endif %}
+  {% if ex.site_files and ex.site_files.status=='ok' %}<details open><summary>Site files (robots, sitemap, security.txt)</summary>{{ kv(ex.site_files) }}</details>{% endif %}
+</section>{% endif %}
+
+<!-- ============ RISK -->
+<section id="risk" class="panel">
+  <h2>Risk &amp; security <small class="muted">{{ r.risk.risk_level|title }} · {{ r.risk.score }} pts</small></h2>
+  {% if r.risk.signals %}<table><tr>{% for k in r.risk.signals[0].keys() %}<th>{{ k }}</th>{% endfor %}</tr>{% for s in r.risk.signals %}<tr>{% for v in s.values() %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}</table>
+  {% else %}<div class="alert good">No risk indicators were detected from public signals.</div>{% endif %}
+  {% for rep in r.reputation_signals %}<div class="alert warn">⚠ <a href="{{ rep.url|safe_url }}" target="_blank" rel="noopener noreferrer">{{ rep.domain }}</a> mentions <b>{{ rep.terms|join(', ') }}</b>. {{ rep.snippet }}</div>{% endfor %}
+  {% if ex.lookalikes and ex.lookalikes.status=='ok' %}<h3>Look-alike domains <small class="muted">{{ ex.lookalikes.checked }} typo/homoglyph variants resolved</small></h3>
+    {% for d in ex.lookalikes.registered %}<span class="tag warn">{{ d.domain }} → {{ d.ip }}</span>{% else %}<p class="muted">None of the checked variants resolve.</p>{% endfor %}<p class="muted">A resolving variant is a review signal, not proof of abuse.</p>{% elif r.type in ['domain','url','email'] and r.mode != 'deep' %}<p class="muted">Look-alike domain checks run in Deep mode.</p>{% endif %}
+  {% for n in r.risk.notes %}<p class="muted">{{ n }}</p>{% endfor %}
+</section>
+
+<!-- ============ EXPORT -->
+<section id="export" class="panel">
+  <h2>Export</h2>
+  <div class="chips big"><a class="btn" href="{{ url_for('export', scan_id=scan_id, fmt='json') }}">JSON (full)</a><a class="btn" href="{{ url_for('export', scan_id=scan_id, fmt='csv') }}">CSV (evidence)</a><a class="btn" href="{{ url_for('export', scan_id=scan_id, fmt='xlsx') }}">Excel</a><a class="btn" href="{{ url_for('export', scan_id=scan_id, fmt='md') }}">Markdown report</a><button class="btn ghost" id="copy-link">Copy link</button></div>
+  <details><summary>Raw result</summary><pre class="raw">{{ r|pretty }}</pre></details>
+</section>
+</div></div>
+{% endblock %}

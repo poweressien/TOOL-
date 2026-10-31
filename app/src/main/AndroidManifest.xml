@@ -36,13 +36,67 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <!-- LAN discovery (mDNS) -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- BioTrack -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <!-- RealityLens, heart-rate camera method -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Noise level meter (audio is analysed live and never stored or sent) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <!-- Home Organizer: uninstall prompt -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
+    <!-- ===== EKPE suite (merged) ===== -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <!-- Labs: Money Tracker (SMS alerts) and Automation rules (send SMS) -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
+
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.truecaller" />
+        <package android:name="org.thoughtcrime.securesms" />
+        <package android:name="com.viber.voip" />
+    </queries>
 
     <application
         android:allowBackup="false"
         android:requestLegacyExternalStorage="true"
-        android:label="Privacy Toolkit"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:largeHeap="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="true">
 
@@ -54,7 +108,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Share a link or a message to Privacy Toolkit to scan it -->
+            <!-- Share a link or a message to EKPE to scan it -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -97,7 +151,7 @@
         <service
             android:name=".UrlAccessibilityService"
             android:exported="true"
-            android:label="Privacy Toolkit Site Guard"
+            android:label="EKPE Site Guard"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -118,6 +172,39 @@
             android:name=".MockLocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
+        <!-- GeoSense: saved-place alerts and journey recording -->
+        <service
+            android:name=".GeoService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+        <receiver android:name=".GeoAlarmReceiver" android:exported="false" />
+
+        <!-- BioTrack: sleep tracking (accelerometer) and daily step rollover -->
+        <service
+            android:name=".SleepService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Overnight sleep tracking using the motion sensor while the phone rests on the bed" />
+        </service>
+        <receiver android:name=".BioAlarmReceiver" android:exported="false" />
+
+        <!-- Radio and environment watch: live noise level, temperature and air alerts -->
+        <service
+            android:name=".EnvService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Invisible helper so the floating bubble can read the clipboard (Android allows only the foreground app) -->
+        <activity
+            android:name=".ClipProxyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"
@@ -136,5 +223,35 @@
                 <action android:name="android.net.VpnService" />
             </intent-filter>
         </service>
+        <!-- ===== EKPE suite (merged): Analyzer, Intel, Split, Fonts, Cloud, Clock, Tools, Radar, Guard, Labs =====
+             Opened from the "EKPE" tab of the main screen. Same app, same process, same icon. -->
+        <activity
+            android:name="com.inwekobong.ekpe.MainActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="adjustResize" />
+        <service android:name="com.inwekobong.ekpe.MediaWatcherService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name="com.inwekobong.ekpe.FloatingClockService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Floating clock overlay shown above other apps" />
+        </service>
+        <service android:name="com.inwekobong.ekpe.FloatingWindowService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Floating resizable windows overlay" />
+        </service>
+        <service android:name="com.inwekobong.ekpe.LanGuardService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name="com.inwekobong.ekpe.AutomationService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name="com.inwekobong.ekpe.RadarService" android:exported="false" android:foregroundServiceType="location|connectedDevice" />
+        <service
+            android:name="com.inwekobong.ekpe.SplitAccessibilityService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/ekpe_accessibility_config" />
+        </service>
+
     </application>
 </manifest>

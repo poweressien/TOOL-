@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}About{% endblock %}
+{% block content %}<section class="wrap narrow"><h1>About {{ SITE_NAME }}</h1>
+<p>{{ SITE_NAME }} researches phones, e-mails, domains, URLs, usernames, IPs, numbers and names using <b>public sources only</b>. Every claim lists its sources and a confidence score, and the exact searches that were run are shown on each result.</p>
+<h3>What it checks</h3><ul>
+<li>Several search engines (DuckDuckGo built in; SerpAPI, Google CSE and Brave with your own keys), merged, de-duplicated and scored.</li>
+<li>Deep mode: follow-up (pivot) searches, page verification, official-site probing, certificate transparency, archive history, look-alike domains.</li>
+<li>News, Wikipedia, Wikidata, GitHub, Hacker News, Gravatar (if public), 30-platform handle presence, TLS, sitemap/robots/security.txt.</li>
+<li>Phone parsing (carrier, region, type), DNS/mail posture, WHOIS/RDAP, IP network registration.</li></ul>
+<h3>What it will not do</h3><ul>
+<li>No private, leaked or data-broker records; people-search sites are excluded from identity inference.</li>
+<li>No home-address or personal-contact harvesting. Only organisations' own published contacts are shown.</li>
+<li>It cannot say who owns a private phone number or mailbox. If nothing public exists, it says so.</li></ul>
+<h3>Search providers</h3><ul>{% for k, v in providers.items() %}<li>{{ '🟢' if v else '⚪' }} {{ k }}: {{ 'enabled' if v else 'not configured' }}</li>{% endfor %}</ul>
+<p class="muted">Use only for lawful, ethical research: due diligence, fraud checks, OSINT on your own assets.</p></section>{% endblock %}

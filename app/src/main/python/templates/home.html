@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block title %}Search{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>{{ SITE_TAGLINE }}</h1>
+  <p class="lead">Every claim comes with its sources, a confidence score, and the exact searches that found it.</p>
+  {% set q = '' %}{% include "_searchbar.html" %}
+  <div class="chips">Try: {% for c in CATEGORIES[1:] %}<a href="{{ url_for('search', q=c.example, cat=c.id) }}">{{ c.example }}</a>{% endfor %}</div>
+</section>
+<section class="wrap">
+  <h2>Browse by category</h2>
+  <div class="grid">{% for c in CATEGORIES[1:] %}
+    <a class="card cat" href="{{ url_for('category', cat=c.id) }}"><div class="ico">{{ c.icon }}</div><h3>{{ c.name }}</h3><p>{{ c.desc }}</p><span class="muted">{{ c.hint }}</span></a>{% endfor %}</div>
+</section>
+<section class="wrap">
+  <h2>What you get on every scan</h2>
+  <div class="grid feats">
+    <div class="card"><h3>🔍 The search trail</h3><p>Every query run, which engine answered, how many results came back and from which domains.</p></div>
+    <div class="card"><h3>🧾 Evidence, scored</h3><p>Each result is ranked with a visible score breakdown. Exact matches on verified pages beat fuzzy hits.</p></div>
+    <div class="card"><h3>🧬 Entity profiles</h3><p>Official site, description, address, socials, technologies and a corroboration matrix.</p></div>
+    <div class="card"><h3>📰 News &amp; mentions</h3><p>Recent news, Hacker News discussion, Wikipedia/Wikidata, GitHub and outside mentions.</p></div>
+    <div class="card"><h3>🛡 Technical data</h3><p>WHOIS/RDAP, DNS, TLS certificate, sitemap, archive history, certificate-transparency subdomains.</p></div>
+    <div class="card"><h3>⬇ Exports</h3><p>JSON, CSV, Excel (multi-sheet) and a Markdown report for every result.</p></div>
+  </div>
+</section>
+{% if recent %}<section class="wrap"><h2>Recent searches</h2>{% include "_recent.html" %}</section>{% endif %}
+{% endblock %}

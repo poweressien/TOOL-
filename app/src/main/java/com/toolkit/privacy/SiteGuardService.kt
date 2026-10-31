@@ -26,6 +26,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -71,13 +72,14 @@ class SiteGuardService : Service() {
     private lateinit var wm: WindowManager
     private var bubble: BubbleView? = null
     private var bubbleLp: WindowManager.LayoutParams? = null
-    private var panel: LinearLayout? = null
+    private var panel: View? = null
     private var gen = 0
     private val cache = HashMap<String, Pair<Long, SiteVerdict>>()
     private val warned = HashMap<String, Long>()
     private var currentUrl: String = ""
     private var lastPushUrl = ""
     private var lastPushAt = 0L
+    private var actionResult = ""
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -164,8 +166,8 @@ class SiteGuardService : Service() {
 
     private fun showBubble() {
         if (bubble != null) return
-        val size = dp(64f).toInt()
         val sp = Prefs.sp(this)
+        val size = dp(sp.getInt(Prefs.SG_SIZE, 64).toFloat()).toInt()
         val lp = WindowManager.LayoutParams(
             size, size, overlayType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -176,6 +178,8 @@ class SiteGuardService : Service() {
             y = sp.getInt(Prefs.SG_Y, (resources.displayMetrics.heightPixels * 0.35f).toInt())
         }
         val b = BubbleView(this)
+        b.k = sp.getInt(Prefs.SG_SIZE, 64) / 64f
+        b.alpha = sp.getInt(Prefs.SG_ALPHA, 100).coerceIn(30, 100) / 100f
         last?.let { b.set(it.score, scanning) }
         b.setOnTouchListener(DragTouch(lp))
         try { wm.addView(b, lp); bubble = b; bubbleLp = lp } catch (e: Exception) { }
@@ -185,17 +189,20 @@ class SiteGuardService : Service() {
         private var downX = 0f; private var downY = 0f
         private var startX = 0; private var startY = 0
         private var dragging = false
+        private var longFired = false
         private val slop = ViewConfiguration.get(this@SiteGuardService).scaledTouchSlop
+        private val longRun = Runnable { longFired = true; perform("clip_link") }
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    downX = e.rawX; downY = e.rawY; startX = lp.x; startY = lp.y; dragging = false
+                    downX = e.rawX; downY = e.rawY; startX = lp.x; startY = lp.y; dragging = false; longFired = false
                     v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(80).start()
+                    main.postDelayed(longRun, ViewConfiguration.getLongPressTimeout().toLong())
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = e.rawX - downX; val dy = e.rawY - downY
-                    if (!dragging && (abs(dx) > slop || abs(dy) > slop)) { dragging = true; hidePanel() }
+                    if (!dragging && (abs(dx) > slop || abs(dy) > slop)) { dragging = true; main.removeCallbacks(longRun); hidePanel() }
                     if (dragging) {
                         val m = resources.displayMetrics
                         lp.x = (startX + dx).toInt().coerceIn(0, m.widthPixels - lp.width)
@@ -205,7 +212,11 @@ class SiteGuardService : Service() {
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
-                    if (dragging) snapToEdge(v, lp) else if (e.actionMasked == MotionEvent.ACTION_UP) togglePanel()
+                    main.removeCallbacks(longRun)
+                    if (dragging) {
+                        if (Prefs.sp(this@SiteGuardService).getBoolean(Prefs.SG_SNAP, false)) snapToEdge(v, lp)
+                        else Prefs.sp(this@SiteGuardService).edit().putInt(Prefs.SG_X, lp.x).putInt(Prefs.SG_Y, lp.y).apply()
+                    } else if (e.actionMasked == MotionEvent.ACTION_UP && !longFired) togglePanel()
                 }
             }
             return true
@@ -243,7 +254,8 @@ class SiteGuardService : Service() {
         val blp = bubbleLp ?: return
         val v = last
         val m = resources.displayMetrics
-        val w = minOf(dp(300f).toInt(), m.widthPixels - dp(24f).toInt())
+        val w = minOf(dp(330f).toInt(), m.widthPixels - dp(24f).toInt())
+        val maxH = (m.heightPixels * 0.62f).toInt()
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             val pad = dp(14f).toInt(); setPadding(pad, pad, pad, pad)
@@ -251,7 +263,7 @@ class SiteGuardService : Service() {
         }
         if (v == null) {
             box.addView(tv("No site checked yet", 16f, Color.WHITE, true))
-            box.addView(tv("Open a website in your browser (with auto-detect on), or share a link to Privacy Toolkit.", 13f, 0xFFB6C2D0.toInt()))
+            box.addView(tv("Open a website in your browser (with auto-detect on), copy a link and tap \"Scan copied link\", or share a link to EKPE.", 13f, 0xFFB6C2D0.toInt()))
         } else {
             val c = SiteRules.colorFor(v.score)
             val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -267,31 +279,132 @@ class SiteGuardService : Service() {
                 box.addView(tv((if (it.delta < 0) "▼ " else "▲ ") + it.text, 12.5f, if (it.delta < 0) 0xFFFCA5A5.toInt() else 0xFF86EFAC.toInt()).apply { setPadding(0, dp(6f).toInt(), 0, 0) })
             }
         }
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(12f).toInt(), 0, 0) }
-        fun btn(label: String, onClick: () -> Unit) = tv(label, 13f, 0xFF2DD4BF.toInt(), true).apply {
-            setPadding(0, dp(6f).toInt(), dp(18f).toInt(), dp(6f).toInt()); setOnClickListener { onClick() }
+        if (actionResult.isNotEmpty()) {
+            box.addView(tv(actionResult, 12.5f, 0xFFE2E8F0.toInt()).apply {
+                setPadding(dp(10f).toInt(), dp(8f).toInt(), dp(10f).toInt(), dp(8f).toInt())
+                background = GradientDrawable().apply { setColor(0x33FFFFFF); cornerRadius = dp(10f) }
+                (layoutParams as? LinearLayout.LayoutParams)
+            })
         }
-        if (currentUrl.isNotEmpty()) row.addView(btn("Re-scan") { check(currentUrl, force = true) })
-        row.addView(btn("Open app") {
-            hidePanel()
-            startActivity(Intent(this, MainActivity::class.java).putExtra("tab", 5).putExtra("sub", 0)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-        })
-        row.addView(btn("Hide bubble") { stop(this) })
-        box.addView(row)
+        // action grid, 3 per row
+        val acts = BubbleActions.all.filter { it.id != "rescan" || currentUrl.isNotEmpty() }
+        acts.chunked(3).forEach { rowActs ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(8f).toInt(), 0, 0) }
+            rowActs.forEach { a ->
+                val cell = TextView(this).apply {
+                    text = a.icon + "\n" + a.label; gravity = Gravity.CENTER; setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                    setTextColor(0xFFE2E8F0.toInt()); setPadding(dp(4f).toInt(), dp(8f).toInt(), dp(4f).toInt(), dp(8f).toInt())
+                    background = GradientDrawable().apply { setColor(0x22FFFFFF); cornerRadius = dp(12f) }
+                    setOnClickListener { perform(a.id) }
+                }
+                row.addView(cell, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(3f).toInt(), 0, dp(3f).toInt(), 0) })
+            }
+            repeat(3 - rowActs.size) { row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f)) }
+            box.addView(row)
+        }
+        box.addView(tv("Drag the bubble anywhere · long-press = scan copied link", 10.5f, 0xFF7C8A9A.toInt()).apply { setPadding(0, dp(10f).toInt(), 0, 0) })
 
+        val scroll = object : ScrollView(this) {
+            override fun onMeasure(wSpec: Int, hSpec: Int) { super.onMeasure(wSpec, MeasureSpec.makeMeasureSpec(maxH, MeasureSpec.AT_MOST)) }
+        }
+        scroll.addView(box)
         val below = blp.y + blp.height / 2 < m.heightPixels / 2
         val lp = WindowManager.LayoutParams(
             w, WindowManager.LayoutParams.WRAP_CONTENT, overlayType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = (blp.x + blp.width / 2 - w / 2).coerceIn(dp(12f).toInt(), m.widthPixels - w - dp(12f).toInt())
-            y = if (below) blp.y + blp.height + dp(8f).toInt() else (blp.y - dp(8f).toInt() - dp(230f).toInt()).coerceAtLeast(dp(24f).toInt())
+            gravity = (if (below) Gravity.TOP else Gravity.BOTTOM) or Gravity.START
+            x = (blp.x + blp.width / 2 - w / 2).coerceIn(dp(12f).toInt(), (m.widthPixels - w - dp(12f).toInt()).coerceAtLeast(dp(12f).toInt()))
+            y = if (below) blp.y + blp.height + dp(8f).toInt() else m.heightPixels - blp.y + dp(8f).toInt()
         }
-        box.setOnTouchListener { _, e -> if (e.action == MotionEvent.ACTION_OUTSIDE) { hidePanel(); true } else false }
-        try { wm.addView(box, lp); panel = box } catch (e: Exception) { }
+        scroll.setOnTouchListener { _, e -> if (e.action == MotionEvent.ACTION_OUTSIDE) { hidePanel(); true } else false }
+        try { wm.addView(scroll, lp); panel = scroll } catch (e: Exception) { }
+    }
+
+    // ------------------------------------------------------------------ panel actions
+
+    private fun openApp(tab: Int, sub: Int) {
+        hidePanel()
+        startActivity(Intent(this, MainActivity::class.java).putExtra("tab", tab).putExtra("sub", sub)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+    }
+
+    private fun runBg(label: String, f: () -> String) {
+        actionResult = label; showPanel()
+        worker.execute {
+            val r = try { f() } catch (e: Exception) { "Failed: ${e.message}" }
+            main.post { actionResult = r; if (instance != null) showPanel() }
+        }
+    }
+
+    fun perform(id: String) {
+        when (id) {
+            "rescan" -> { actionResult = ""; check(currentUrl, force = true) }
+            "clip_link", "clip_msg", "clip_secret" -> {
+                actionResult = "Reading what you copied…"
+                if (panel != null) showPanel()
+                try {
+                    startActivity(Intent(this, ClipProxyActivity::class.java).putExtra("kind", id.removePrefix("clip_"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS))
+                } catch (e: Exception) { actionResult = "Could not read the clipboard: ${e.message}"; if (panel != null) showPanel() }
+            }
+            "net" -> runBg("Checking network…") { BubbleActions.network(this) }
+            "ip" -> runBg("Looking up your public IP…") { BubbleActions.publicIp() }
+            "ping" -> runBg("Pinging…") { BubbleActions.ping() }
+            "speed" -> runBg("Downloading a test file for 6 seconds…") { BubbleActions.speed() }
+            "battery" -> runBg("Reading…") { BubbleActions.battery(this) }
+            "torch" -> { actionResult = BubbleActions.torch(this); showPanel() }
+            "park" -> runBg("Getting your location…") { GeoStore.saveParkingNow(this) }
+            "copy_url", "share_url", "open_url" -> {
+                if (currentUrl.isEmpty()) { actionResult = "No site checked yet."; showPanel() }
+                else when (id) {
+                    "copy_url" -> { copyText(this, currentUrl); actionResult = "Copied $currentUrl"; showPanel() }
+                    "share_url" -> { hidePanel(); startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, currentUrl), "Share").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    else -> { hidePanel(); openUrl(this, currentUrl) }
+                }
+            }
+            "reports", "whois", "archive", "vt" -> {
+                if (currentUrl.isEmpty()) { actionResult = "Check a site first."; showPanel() }
+                else { hidePanel(); openUrl(this, BubbleActions.siteWebUrl(id, currentUrl)) }
+            }
+            "intel" -> if (currentUrl.isEmpty()) { actionResult = "Check a site first."; showPanel() } else runBg("Gathering intel…") { BubbleActions.intelSummary(currentUrl) }
+            "contact" -> openApp(5, 1)
+            "scamtext" -> openApp(5, 2)
+            "wifipro" -> openApp(2, 6)
+            "lens" -> openApp(9, 0)
+            "lan" -> openApp(2, 5)
+            "qr" -> openApp(4, 0)
+            "monitor" -> openApp(5, 3)
+            "app" -> openApp(5, 0)
+            "hide" -> stop(this)
+        }
+    }
+
+    /** Called by ClipProxyActivity with the clipboard text. */
+    fun onClip(kind: String, text: String) {
+        main.post {
+            if (text.isBlank()) { actionResult = "Clipboard is empty. Copy a link or message first."; showPanel(); return@post }
+            when (kind) {
+                "link" -> {
+                    val urls = SiteRules.extractUrls(text)
+                    if (urls.isEmpty()) { actionResult = "No link found in the copied text."; if (panel != null) showPanel() }
+                    else { actionResult = "Scanning ${urls[0].take(60)}"; check(urls[0], force = true); if (panel == null) showPanel() }
+                }
+                "msg" -> { actionResult = BubbleActions.scamSummary(text); showPanel() }
+                else -> { actionResult = BubbleActions.secretSummary(text); showPanel() }
+            }
+        }
+    }
+
+    /** Rebuilds the bubble after the user changes size / opacity in the app. */
+    fun applyPrefs() {
+        main.post {
+            hidePanel()
+            bubble?.let { try { wm.removeView(it) } catch (e: Exception) { } }
+            bubble = null
+            if (canDraw(this)) showBubble()
+        }
     }
 
     // ------------------------------------------------------------------ the round gauge
@@ -300,6 +413,7 @@ class SiteGuardService : Service() {
         private var score = -1
         private var scanning = false
         private var spin = 0f
+        var k = 1f
         private val d = ctx.resources.displayMetrics.density
         private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xEE0E141B.toInt() }
         private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 5 * d; color = 0x33FFFFFF }
@@ -337,9 +451,10 @@ class SiteGuardService : Service() {
                 scanning -> c.drawArc(box, spin - 90f, 100f, false, arc)
                 score >= 0 -> c.drawArc(box, -90f, 360f * score / 100f, false, arc)
             }
-            val text = if (score < 0) "–" else if (scanning && score >= 0) "$score" else "$score"
-            c.drawText(text, w / 2, h / 2 + 5 * d, num)
-            if (score >= 0) c.drawText("%", w / 2, h / 2 + 17 * d, pct)
+            val text = if (score < 0) "–" else "$score"
+            num.textSize = 20 * d * k; pct.textSize = 9 * d * k
+            c.drawText(text, w / 2, h / 2 + 5 * d * k, num)
+            if (score >= 0) c.drawText("%", w / 2, h / 2 + 17 * d * k, pct)
         }
     }
 }

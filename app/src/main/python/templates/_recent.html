@@ -1,0 +1,6 @@
+<div class="list">{% for i in recent %}
+  <a class="row-item" href="{{ url_for('result', scan_id=i.id) }}">
+    <b>{{ i.value }}</b><span class="tag">{{ i.kind.replace('_',' ') }}</span>
+    <span class="muted grow">{{ i.headline }}</span>
+    <span class="score {{ ('good' if i.confidence>=75 else 'mid' if i.confidence>=50 else 'warn' if i.confidence>=25 else 'bad') }}">{{ i.confidence }}</span>
+    <span class="muted">{{ i.created|ago }}</span></a>{% endfor %}</div>

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">EKPE</string>
     <string name="a11y_desc">Reads only the address bar of web browsers so Site Guard can show how safe the page you are on is. It never reads page content, passwords or messages.</string>
+    <string name="acc_desc">Lets EKPE trigger Android split-screen mode. It does not read your screen.</string>
 </resources>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EKPE Radar</title>
+<style>
+:root{--bg:#0F1220;--pn:#1B2036;--pn2:#262d4a;--ln:#2d3558;--tx:#E8EAF2;--mu:#9AA3B8;--ac:#4F8CFF;--ok:#5ee6a8;--wa:#ffb547;--bad:#ff6b6b;--wf:#5ad1ff;--bt:#b794ff}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden;font-variant-numeric:tabular-nums}
+header{padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--ln)}
+h1{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px var(--ok);animation:p 1.6s infinite}
+@keyframes p{50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){.dot{animation:none}}
+#st{margin-left:auto;font-size:12px;color:var(--mu)}
+main{flex:1;overflow:auto;padding:12px}
+nav{display:flex;overflow-x:auto;background:var(--pn);border-bottom:1px solid var(--ln);scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+nav button{flex:0 0 auto;background:none;border:0;color:var(--mu);padding:11px 14px 9px;font:600 13px system-ui;cursor:pointer;white-space:nowrap}
+nav button b{display:inline-block;min-width:18px;margin-left:6px;padding:1px 6px;border-radius:99px;background:var(--pn2);font-size:11px;font-weight:700;text-align:center}nav button b:empty{display:none}
+nav button.on{color:var(--ac);box-shadow:inset 0 -2px var(--ac)}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:14px;padding:12px;margin-bottom:12px}
+.k{font-size:12px;font-weight:600;color:var(--mu);margin-bottom:8px}
+.mu{color:var(--mu)}small{font-size:11px;color:var(--mu)}
+#cv{width:100%;aspect-ratio:1;display:block}
+.lg{display:flex;gap:14px;justify-content:center;font-size:12px;margin-top:6px;flex-wrap:wrap}
+.row{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--ln)}
+.row:first-child{border-top:0}.row .g{flex:1;min-width:0}.row .g div:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+label{display:block;margin:10px 0;font-size:13px}label input{width:100%;margin-top:6px;accent-color:var(--ac)}
+.btn{width:100%;padding:12px;border:0;border-radius:10px;background:var(--ac);color:#fff;font:700 14px system-ui;margin-top:6px}
+#q{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--ln);background:var(--pn);color:var(--tx);font-size:14px;margin-bottom:10px}
+.wrap{overflow:auto;border:1px solid var(--ln);border-radius:14px;background:var(--pn);max-height:calc(100vh - 150px)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:12px}
+th{position:sticky;top:0;background:var(--pn2);text-align:left;font-weight:600;font-size:12px;color:var(--mu);padding:9px 8px;cursor:pointer;white-space:nowrap}
+td{padding:8px;border-top:1px solid var(--ln);white-space:nowrap}
+.tg{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;border:1px solid currentColor}
+.t-r{color:var(--bad)}.t-a{color:var(--wa)}.t-g{color:var(--ok)}.t-c{color:var(--wf)}.t-m{color:var(--mu)}
+.bar{display:inline-block;width:44px;height:5px;background:#1d2a4a;border-radius:9px;vertical-align:middle;overflow:hidden;margin-left:4px}
+.bar i{display:block;height:100%}
+.ring{width:150px;height:150px;border-radius:50%;margin:4px auto 10px;display:grid;place-items:center;background:conic-gradient(var(--rc) var(--deg),#1d2a4a 0)}
+.ring b{width:120px;height:120px;border-radius:50%;background:var(--pn);display:grid;place-items:center;font-size:34px}
+.sp2{display:flex;gap:18px;margin-bottom:8px}.sp2 span{display:block}.sp2 b{font-size:22px}
+#sp{width:100%;height:70px;display:block}
+.kv{display:grid;grid-template-columns:1fr auto;gap:0}.kv div{padding:7px 0;border-top:1px solid var(--ln)}.kv div:nth-child(2n){text-align:right}.kv div:nth-child(-n+2){border-top:0}
+.em{height:10px;border-radius:9px;background:#1d2a4a;overflow:hidden;margin:8px 0}.em i{display:block;height:100%;transition:width .4s}
+</style></head><body>
+<header><i class="dot"></i><h1>EKPE Radar</h1><span id="st">connecting…</span></header>
+<nav id="nav"></nav>
+<main>
+<section id="radar">
+ <div class="card"><canvas id="cv"></canvas>
+  <div class="lg"><span style="color:var(--wf)">● Wi-Fi</span><span style="color:var(--bt)">● Bluetooth</span><span style="color:var(--wa)">● Cell tower</span><span style="color:var(--ok)">◉ You</span></div>
+  <small style="display:block;text-align:center;margin-top:6px">Rings mark 1 m, 10 m, 100 m and 1 km (log scale). Direction is not measured, so angles only separate devices.</small></div>
+ <div class="card"><div class="k">Electromagnetic field (magnetometer)</div><div id="emf"></div>
+  <small>Picks up magnets, motors, power lines and strong transmitters. Phones cannot sense ionizing radiation, so this is not a radiation detector.</small></div>
+ <div class="card"><div class="k">Closest to you</div><div id="near"></div></div>
+ <div class="card"><div class="k">Alert settings</div>
+  <label>Bluetooth proximity alert within <b id="rv"></b> m<input type="range" id="rr" min="1" max="30"></label>
+  <label>Electromagnetic spike sensitivity: <b id="ev"></b> µT change<input type="range" id="er" min="5" max="80"></label>
+  <button class="btn" onclick="window.Native&&Native.test()">Send test notification</button></div>
+</section>
+<section id="tbl" hidden><input id="q" placeholder="Filter by name, brand, address…" oninput="q=this.value.toLowerCase();rt()"><div class="wrap" id="t"></div></section>
+<section id="sig" hidden></section>
+<section id="log" hidden></section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const MNC={'621-20':'Airtel Nigeria','621-30':'MTN Nigeria','621-50':'Glo (Globacom)','621-60':'9mobile','620-1':'MTN Ghana','620-2':'Vodafone Ghana','639-2':'Safaricom','655-1':'Vodacom SA','655-10':'MTN South Africa','310-410':'AT&T','310-260':'T-Mobile US','311-480':'Verizon','234-10':'O2 UK','234-15':'Vodafone UK','234-30':'EE','404-45':'Airtel India','405-840':'Jio','262-1':'Telekom DE','208-1':'Orange FR','460-0':'China Mobile','460-1':'China Unicom','460-11':'China Telecom'};
+const CO={76:'Apple',6:'Microsoft',117:'Samsung',224:'Google',301:'Sony',637:'Huawei',911:'Xiaomi',135:'Garmin',158:'Bose',89:'Nordic Semi',2:'Intel',10:'Qualcomm',369:'Amazon',196:'LG',87:'Harman (JBL)',103:'GN (Jabra)',15:'Broadcom',93:'Realtek',13:'Texas Instruments'};
+const OUI={'B8:27:EB':'Raspberry Pi','DC:A6:32':'Raspberry Pi','FC:EC:DA':'Ubiquiti','24:5A:4C':'Ubiquiti','3C:5A:B4':'Google','F4:F5:D8':'Google','00:50:56':'VMware','00:0C:29':'VMware','00:03:93':'Apple','00:17:F2':'Apple'};
+const SS=[[/iphone|ipad/i,'Apple (hotspot)'],[/galaxy|sm-/i,'Samsung (hotspot)'],[/redmi|xiaomi|poco/i,'Xiaomi'],[/huawei|honor/i,'Huawei'],[/tecno|infinix|itel/i,'Transsion'],[/tp-?link/i,'TP-Link'],[/tenda/i,'Tenda'],[/mtn/i,'MTN'],[/glo/i,'Glo'],[/airtel/i,'Airtel'],[/spectranet/i,'Spectranet'],[/smile/i,'Smile'],[/starlink/i,'Starlink'],[/direct-/i,'Wi-Fi Direct device']];
+const STD={4:'Wi-Fi 4',5:'Wi-Fi 5',6:'Wi-Fi 6',7:'WiGig',8:'Wi-Fi 7',1:'Legacy'};
+const GEN={13:'LTE (4G)',19:'LTE-CA (4G+)',20:'5G NR',15:'HSPA+ (3.5G)',3:'UMTS (3G)',8:'HSDPA',9:'HSUPA',10:'HSPA',2:'EDGE (2G)',1:'GPRS (2G)',16:'GSM'};
+let D=null,tab='radar',q='',sort={},hist=[],prev=null,base0=null,spd={d:0,u:0,peak:0};
+let cfg=JSON.parse(localStorage.getItem('rs_cfg')||'{"r":3,"e":20}');
+
+const fd=m=>m<1000?(m<10?m.toFixed(1):Math.round(m))+' m':(m/1000).toFixed(2)+' km';
+const prox=m=>m<1?['Immediate','r']:m<3?['Near','a']:m<10?['Close','g']:m<30?['Far','c']:['Distant','m'];
+const tg=(t,c)=>`<span class="tg t-${c}">${esc(t)}</span>`;
+const dist=m=>fd(m)+' '+tg(...prox(m));
+const col=p=>p>66?'var(--ok)':p>33?'var(--wa)':'var(--bad)';
+const sg=(dbm,p)=>`${dbm} dBm<span class="bar"><i style="width:${p}%;background:${col(p)}"></i></span> ${p}%`;
+const wpct=r=>Math.max(0,Math.min(100,(r+100)*2));
+const bpct=r=>Math.max(0,Math.min(100,Math.round((r+100)*100/60)));
+const op=c=>MNC[c.mcc+'-'+parseInt(c.mnc)]||('Unknown ('+c.mcc+'-'+c.mnc+')');
+const vend=w=>{const m=(w.b||'').slice(0,8).toUpperCase();if(OUI[m])return OUI[m];for(const[r,n]of SS)if(r.test(w.s||''))return n;return /^.[26AE]/i.test(w.b||'')?'Private / randomized':'Unknown'};
+const bbrand=b=>CO[b.co]||(b.co>=0?'Company 0x'+b.co.toString(16):'Unknown');
+const btype=b=>{const n=(b.n||'').toLowerCase(),u=b.u||[];
+ if(/buds|pods|head|speaker|jbl|sound|audio|earbud|airdots|bose/.test(n)||u.includes('110b')||u.includes('184e'))return'Audio';
+ if(/watch|band|fit|amazfit|garmin/.test(n)||u.includes('180d'))return'Wearable';
+ if(/tv|bravia|roku|chromecast/.test(n))return'TV / media';
+ if(/tag|tile|beacon/.test(n))return'Tracker';
+ if(/mouse|keyboard|kbd|remote/.test(n)||u.includes('1812'))return'Input (HID)';
+ if(u.includes('181a'))return'Sensor';
+ if(b.co===76)return'Apple device';if(b.co===117)return'Samsung device';return'Unknown'};
+
+const T={
+ cell:{c:['Status','Tech','Operator (owner)','MCC-MNC','Cell ID','TAC / LAC','PCI','Channel','Signal','Distance'],def:9,
+  r:()=>D.cells.map(x=>({v:[x.reg?tg('Serving','g'):tg('Neighbor','m'),x.rat,esc(op(x)),x.mcc+'-'+x.mnc,x.id,x.area,x.pci,x.ch,sg(x.dbm,x.pct),dist(x.d)+' <small>'+(x.src=='DB'?'tower database'+(x.brg?' · '+x.brg:''):x.src=='TA'?'timing':'estimate')+'</small>'],
+   s:[x.reg?0:1,x.rat,op(x),x.mcc+x.mnc,x.id,x.area,x.pci,x.ch,-x.dbm,x.d]}))},
+ wifi:{c:['Network','Vendor','MAC','Signal','Distance','Band · channel · width','Security','Standard'],def:4,
+  r:()=>D.wifi.map(w=>({v:[esc(w.s||'‹hidden›')+(w.c?' '+tg('Connected','g'):''),esc(vend(w)),w.b,sg(w.r,wpct(w.r)),dist(w.d),(w.f>5900?'6':w.f>4900?'5':'2.4')+' GHz · ch '+w.ch+' · '+w.w+' MHz',tg(w.sec,w.sec=='Open'?'r':w.sec=='WEP'?'a':'g'),STD[w.std]||'—'],
+   s:[w.s||'',vend(w),w.b,-w.r,w.d,w.f,w.sec,w.std]}))},
+ ble:{c:['Name','Type','Brand','Address','Signal','Distance','Last seen'],def:5,
+  r:()=>D.ble.map(b=>({v:[esc(b.n||'Unnamed'),btype(b),bbrand(b),b.a,sg(b.r,bpct(b.r)),dist(b.d),b.age+' s ago'],
+   s:[b.n||'',btype(b),bbrand(b),b.a,-b.r,b.d,b.age]}))}
+};
+function so(k,i){const s=sort[k]||{i:T[k].def,a:true};sort[k]={i,a:s.i==i?!s.a:true};rt()}
+function rt(){if(!D||!T[tab])return;const k=tab,t=T[k],s=sort[k]||{i:t.def,a:true};
+ let rows=t.r().filter(r=>!q||r.s.join(' ').toLowerCase().includes(q));
+ rows.sort((a,b)=>{const x=a.s[s.i],y=b.s[s.i];const c=typeof x=='number'&&typeof y=='number'?x-y:String(x).localeCompare(String(y));return s.a?c:-c});
+ $('#t').innerHTML='<table><thead><tr>'+t.c.map((h,i)=>`<th onclick="so('${k}',${i})">${h}${s.i==i?(s.a?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
+  (rows.length?rows.map(r=>'<tr>'+r.v.map(c=>`<td>${c}</td>`).join('')+'</tr>').join(''):`<tr><td colspan="${t.c.length}" class="mu">Nothing found yet. Check that location, Bluetooth and Wi-Fi are on and permissions are allowed.</td></tr>`)+'</tbody></table>'}
+
+function all(){const L=[];
+ D.wifi.forEach(w=>L.push({k:'w'+w.b,n:w.s||'(hidden network)',t:'Wi-Fi',d:w.d,c:'#5ad1ff'}));
+ D.ble.forEach(b=>L.push({k:'b'+b.a,n:b.n||btype(b)+' · '+b.a.slice(-5),t:'Bluetooth',d:b.d,c:'#b794ff'}));
+ D.cells.forEach((c,i)=>L.push({k:'c'+i+c.id,n:op(c)+' '+c.rat,t:'Cell tower',d:c.d,c:'#ffb547'}));
+ return L}
+const ang=k=>{let h=0;for(const ch of k)h=(h*31+ch.charCodeAt(0))|0;return(Math.abs(h)%3600)/3600*6.2832};
+
+function draw(t){requestAnimationFrame(draw);if(tab!='radar'||!D)return;
+ const c=$('#cv'),s=devicePixelRatio||1,W=c.width=Math.max(1,c.clientWidth*s);c.height=W;
+ const x=c.getContext('2d'),O=W/2,R=O-10*s,rr=m=>R*Math.log10(1+m)/Math.log10(5001);
+ x.translate(O,O);x.font=10*s+'px system-ui';x.lineWidth=s;x.strokeStyle='#243153';x.fillStyle='#8190b8';
+ [1,10,100,1000].forEach(m=>{x.beginPath();x.arc(0,0,rr(m),0,7);x.stroke();x.fillText(m>=1000?'1 km':m+' m',4*s,-rr(m)-3*s)});
+ x.beginPath();x.arc(0,0,R,0,7);x.moveTo(-R,0);x.lineTo(R,0);x.moveTo(0,-R);x.lineTo(0,R);x.stroke();
+ const a=(t/1600)%6.2832;
+ if(x.createConicGradient){const g=x.createConicGradient(a-1.2,0,0);g.addColorStop(0,'rgba(94,230,168,0)');g.addColorStop(.19,'rgba(94,230,168,.32)');g.addColorStop(.2,'rgba(94,230,168,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,R,0,7);x.fill()}
+ x.strokeStyle='#5ee6a8';x.beginPath();x.moveTo(0,0);x.lineTo(Math.cos(a)*R,Math.sin(a)*R);x.stroke();
+ all().forEach(o=>{const th=ang(o.k),r=rr(o.d);x.fillStyle=o.c;x.shadowColor=o.c;x.shadowBlur=8*s;x.beginPath();x.arc(Math.cos(th)*r,Math.sin(th)*r,3.5*s,0,7);x.fill()});
+ x.shadowBlur=0;x.fillStyle='#5ee6a8';x.beginPath();x.arc(0,0,5*s,0,7);x.fill()}
+
+function rradar(){
+ const dl=Math.abs(D.emf-D.base),lv=dl>cfg.e?['Source detected','bad']:dl>cfg.e/2?['Elevated','wa']:['Normal','ok'];
+ $('#emf').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:26px;font-weight:700">${D.emf.toFixed(1)} µT</span><span style="color:var(--${lv[1]});font-weight:700">${lv[0]}</span></div><div class="em"><i style="width:${Math.min(100,D.emf/2)}%;background:var(--${lv[1]})"></i></div><small>Normal level for here: ${D.base.toFixed(1)} µT · change ${dl.toFixed(1)} µT</small>`;
+ const n=all().sort((a,b)=>a.d-b.d).slice(0,6);
+ $('#near').innerHTML=n.length?n.map(o=>`<div class="row"><span style="color:${o.c}">●</span><div class="g"><div>${esc(o.n)}</div><small>${o.t}</small></div><div>${dist(o.d)}</div></div>`).join(''):'<span class="mu">Scanning…</span>'}
+
+function rsig(){const n=D.net,sv=D.cells.find(c=>c.reg),p=n.type=='Wi-Fi'?(n.pct||0):sv?sv.pct:0;
+ const kv=[['Connection',n.type+(n.net?' · internet OK':n.type=='Offline'?'':' · no internet')]];
+ if(n.type=='Wi-Fi'){kv.push(['Wi-Fi network',esc(n.ssid||'—')],['Signal strength',(n.rssi??'—')+' dBm'],['Link speed',(n.link??'—')+' Mbps'],['Frequency',(n.freq??'—')+' MHz'])}
+ if(n.op)kv.push(['Carrier',esc(n.op)+(n.roam?' (roaming)':'')],['Mobile network',GEN[n.gen]||'—']);
+ if(sv)kv.push(['Serving tower',sv.rat+' · '+sv.dbm+' dBm · '+fd(sv.d)]);
+ kv.push(['Network capacity (OS estimate)','↓ '+(n.dl/1000).toFixed(0)+' / ↑ '+(n.ul/1000).toFixed(0)+' Mbps']);
+ if(base0!==null&&n.rx>=0)kv.push(['Data used since opening',((n.rx-base0.rx+n.tx-base0.tx)/1048576).toFixed(1)+' MB']);
+ $('#sig').innerHTML=`<div class="card" style="text-align:center"><div class="ring" style="--rc:${col(p)};--deg:${p*3.6}deg"><b>${p}%</b></div><div>${esc(n.type)} signal</div></div>
+ <div class="card"><div class="k">Live speed (whole phone)</div><div class="sp2"><span><small>Download</small><b>${spd.d.toFixed(2)}</b> Mbps</span><span><small>Upload</small><b>${spd.u.toFixed(2)}</b> Mbps</span><span><small>Peak down</small><b>${spd.peak.toFixed(1)}</b></span></div><canvas id="sp"></canvas></div>
+ <div class="card"><div class="k">Connection details</div><div class="kv">${kv.map(r=>`<div>${r[0]}</div><div>${r[1]}</div>`).join('')}</div></div>`;
+ const c=$('#sp'),s=devicePixelRatio||1,W=c.width=c.clientWidth*s,H=c.height=70*s,x=c.getContext('2d'),mx=Math.max(1,...hist.flat());
+ [[0,'#5ee6a8'],[1,'#5ad1ff']].forEach(([j,cl])=>{x.beginPath();hist.forEach((h,i)=>{const px=i/59*W,py=H-h[j]/mx*(H-6*s)-3*s;i?x.lineTo(px,py):x.moveTo(px,py)});x.strokeStyle=cl;x.lineWidth=2*s;x.stroke()})}
+
+function rlog(){$('#log').innerHTML=D.log.length?'<div class="card">'+D.log.map(l=>`<div class="row"><div class="g"><div style="font-weight:600;white-space:normal">${esc(l.title)}</div><small style="white-space:normal">${esc(l.text)}</small></div><small>${new Date(l.t).toLocaleTimeString()}</small></div>`).join('')+'</div>':'<div class="card mu">No alerts yet. New nearby devices, tower changes, weak signal, rogue hotspots and strong electromagnetic sources will pop up here and as notifications.</div>'}
+
+const TABS=[['radar','','Radar'],['cell','','Towers'],['wifi','','Wi-Fi'],['ble','','Bluetooth'],['sig','','Signal'],['log','','Alerts']];
+$('#nav').innerHTML=TABS.map(([k,i,l])=>`<button id="b-${k}" onclick="go('${k}')">${l}<b>${i}</b></button>`).join('');
+function go(k){tab=k;q='';$('#q').value='';render()}
+function render(){if(!D)return;
+ $('#b-cell b').textContent=D.cells.length;$('#b-wifi b').textContent=D.wifi.length;$('#b-ble b').textContent=D.ble.length;$('#b-log b').textContent=D.log.length;
+ TABS.forEach(([k])=>$('#b-'+k).classList.toggle('on',k==tab));
+ $('#radar').hidden=tab!='radar';$('#tbl').hidden=!T[tab];$('#sig').hidden=tab!='sig';$('#log').hidden=tab!='log';
+ if(tab=='radar')rradar();else if(T[tab])rt();else if(tab=='sig')rsig();else rlog()}
+
+function poll(){
+ if(!window.Native){$('#st').textContent='open inside EKPE';return}
+ try{D=JSON.parse(Native.snapshot())}catch(e){return}
+ const n=D.net||{};
+ if(prev&&D.ts>prev.ts&&n.rx>=0){const dt=(D.ts-prev.ts)/1000;spd.d=Math.max(0,(n.rx-prev.rx)*8/1e6/dt);spd.u=Math.max(0,(n.tx-prev.tx)*8/1e6/dt);spd.peak=Math.max(spd.peak,spd.d);hist.push([spd.d,spd.u]);if(hist.length>60)hist.shift()}
+ if(n.rx>=0){prev={ts:D.ts,rx:n.rx,tx:n.tx};if(!base0)base0={rx:n.rx,tx:n.tx}}
+ $('#st').textContent='Live · '+new Date().toLocaleTimeString();render()}
+
+$('#rr').value=cfg.r;$('#er').value=cfg.e;
+function sc(){cfg={r:+$('#rr').value,e:+$('#er').value};$('#rv').textContent=cfg.r;$('#ev').textContent=cfg.e;localStorage.setItem('rs_cfg',JSON.stringify(cfg));window.Native&&Native.cfg(cfg.r,cfg.e)}
+$('#rr').oninput=$('#er').oninput=sc;sc();
+setInterval(poll,1500);poll();requestAnimationFrame(draw);
+</script></body></html>

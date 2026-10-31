@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -28,7 +29,8 @@ import kotlinx.coroutines.delay
 
 data class Ap(
     val ssid: String, val bssid: String, val rssi: Int, val freq: Int,
-    val channel: Int, val band: String, val security: String, val connected: Boolean
+    val channel: Int, val band: String, val security: String, val connected: Boolean,
+    val width: Int = 20, val standard: Int = 0, val wps: Boolean = false
 )
 
 private fun channelOf(f: Int) = when {
@@ -96,7 +98,10 @@ fun WifiAnalyzerScreen() {
                 Ap(
                     ssid = (r.SSID ?: "").ifBlank { "(hidden)" }, bssid = r.BSSID ?: "", rssi = r.level,
                     freq = r.frequency, channel = channelOf(r.frequency), band = bandOf(r.frequency),
-                    security = secOf(r.capabilities ?: ""), connected = r.BSSID == cur
+                    security = secOf(r.capabilities ?: ""), connected = r.BSSID == cur,
+                    width = WifiMath.widthMhz(try { r.channelWidth } catch (e: Exception) { 0 }),
+                    standard = if (Build.VERSION.SDK_INT >= 30) r.wifiStandard else 0,
+                    wps = (r.capabilities ?: "").contains("WPS")
                 )
             }.distinctBy { it.bssid }.sortedByDescending { it.rssi }
         } catch (e: SecurityException) { emptyList() }
@@ -119,6 +124,7 @@ fun WifiAnalyzerScreen() {
         contentPadding = PaddingValues(vertical = 14.dp)
     ) {
         item { Text("Wi-Fi analyzer", style = MaterialTheme.typography.headlineSmall) }
+        if (hasPerm) item { ConnectedWifiCard() }
         if (!hasPerm) {
             item {
                 Card(Modifier.fillMaxWidth()) {
@@ -148,6 +154,11 @@ fun WifiAnalyzerScreen() {
                 }
             }
         }
+        if (aps.isNotEmpty()) {
+            item { InterferenceCard(aps) }
+            item { SecurityWatchCard(aps) }
+        }
+        item { WifiPasswordsCard() }
         if (aps.isEmpty()) {
             item { Text("No results yet. Make sure Wi-Fi and Location are on. Android limits scans to a few per minute.", style = MaterialTheme.typography.bodySmall) }
         }
@@ -160,6 +171,7 @@ fun WifiAnalyzerScreen() {
                     }
                     PercentBar(((ap.rssi + 100) * 2).coerceIn(0, 100), if (ap.rssi >= -60) Color(0xFF34D399) else if (ap.rssi >= -75) Color(0xFFFBBF24) else Color(0xFFEF4444), 8)
                     Text("ch ${ap.channel} · ${ap.band} (${ap.freq} MHz) · ${ap.security}", style = MaterialTheme.typography.bodySmall)
+                    Text("${ap.width} MHz wide" + (if (ap.standard >= 4) " · ${WifiMath.standardName(ap.standard)}" else "") + " · ~${"%.0f".format(WifiMath.distanceM(ap.rssi, ap.freq.coerceAtLeast(2412)))} m" + (if (ap.wps) " · WPS on" else ""), style = MaterialTheme.typography.bodySmall)
                     Text(ap.bssid, style = MaterialTheme.typography.bodySmall)
                 }
             }
