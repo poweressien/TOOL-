@@ -27,7 +27,7 @@ The app name is **EKPE** and the launcher icon is your photo (see `branding/`).
 * `AndroidManifest.xml` - union of both manifests (all permissions, all services, the `<queries>` block). EKPE's activity is no longer a launcher
   entry; the main screen is the only launcher entry. EKPE's accessibility config was renamed to `ekpe_accessibility_config.xml` to avoid a name clash.
 * `app/build.gradle.kts` - both dependency lists merged, Chaquopy plugin added, fixed signing config, APK named `EKPE`.
-  Toolchain: AGP 8.5.2, Kotlin 2.0.20, Gradle 8.9, Chaquopy 17.2.0, Python 3.12.
+  Toolchain: AGP 8.5.2, Kotlin 2.0.20, Gradle 8.9, Chaquopy 17.2.0, Python 3.11 (3.12+ drops armeabi-v7a, so 3.11 is what keeps 32-bit phones working).
 * ABIs: arm64-v8a, armeabi-v7a, x86_64.
 
 ## Build (GitHub Actions)
@@ -35,7 +35,7 @@ The app name is **EKPE** and the launcher icon is your photo (see `branding/`).
 2. Actions tab -> "Build EKPE APK" (runs on every push, or press *Run workflow*).
 3. When green, open the run -> Artifacts -> **EKPE-apk** -> `EKPE.apk`. The **build-log** artifact and the run summary list any compile errors.
 
-Locally: JDK 17, Android SDK 34, Python 3.12 on PATH, then `gradle assembleDebug`.
+Locally: JDK 17, Android SDK 34, Python 3.11 on PATH, then `gradle assembleDebug`.
 
 ## Permissions to allow after install
 Location, Nearby devices, Phone, Contacts, SMS, Camera, Microphone, Notifications, Photos/Videos, overlay ("Display over other apps"),

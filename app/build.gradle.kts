@@ -60,7 +60,7 @@ extensions.configure<BasePluginExtension> { archivesName.set("EKPE") }
 // EKPE: Python engine (Intel / Script Lab) running on-device
 chaquopy {
     defaultConfig {
-        version = "3.12"
+        version = "3.11"   // 3.11 is the newest Python Chaquopy still ships for 32-bit armeabi-v7a
         pip {
             install("flask")
             install("requests")
