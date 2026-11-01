@@ -42,7 +42,7 @@ The app name is **EKPE** and the launcher icon is your photo (see `branding/`).
   entry; the main screen is the only launcher entry. EKPE's accessibility config was renamed to `ekpe_accessibility_config.xml` to avoid a name clash.
 * `app/build.gradle.kts` - both dependency lists merged (plus `material-icons-extended` for the tile icons), Chaquopy plugin added, fixed signing config, APK named `EKPE`.
   Toolchain: AGP 8.5.2, Kotlin 2.0.20, Gradle 8.9, Chaquopy 17.2.0, Python 3.12.
-* ABIs: arm64-v8a, armeabi-v7a, x86_64.
+* ABIs: arm64-v8a, x86_64 (Chaquopy Python 3.12 has no 32-bit ARM build).
 
 ## Build (GitHub Actions)
 1. Push the **contents of this folder** to a GitHub repo (the `.github` folder must be at the repo root).
