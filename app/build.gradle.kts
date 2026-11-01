@@ -60,7 +60,7 @@ extensions.configure<BasePluginExtension> { archivesName.set("EKPE") }
 // EKPE: Python engine (Intel / Script Lab) running on-device
 chaquopy {
     defaultConfig {
-        version = "3.11"   // 3.11 is the newest Python Chaquopy still ships for 32-bit armeabi-v7a
+        version = "3.12"
         pip {
             install("flask")
             install("requests")
@@ -85,6 +85,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.animation:animation")
+    implementation("androidx.compose.material:material-icons-extended")   // one distinct icon per tool tile
     implementation("androidx.media3:media3-transformer:1.4.1")
     implementation("androidx.media3:media3-effect:1.4.1")
     implementation("androidx.media3:media3-common:1.4.1")

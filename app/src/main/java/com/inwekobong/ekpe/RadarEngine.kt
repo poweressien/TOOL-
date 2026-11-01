@@ -94,6 +94,19 @@ object RadarEngine {
         h.post(tick)
     }
 
+    /** Stops scanning (master switch off). start() brings it back. */
+    fun stop() {
+        if (!on) return
+        on = false
+        h.removeCallbacks(tick)
+        try { (ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager).unregisterListener(magL) } catch (e: Exception) { }
+        try {
+            if (bleOn) (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner?.stopScan(cb)
+        } catch (e: Exception) { }
+        bleOn = false
+        ticks = 0
+    }
+
     // ---------- alerts ----------
     private fun alert(key: String, title: String, text: String, gap: Long = 15000) {
         val now = SystemClock.elapsedRealtime()

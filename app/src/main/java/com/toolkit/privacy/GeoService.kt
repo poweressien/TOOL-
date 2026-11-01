@@ -157,6 +157,7 @@ class GeoService : Service() {
 
 class GeoAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
+        if (!MasterSwitch.isOn(ctx)) return
         Notify.alert(ctx, 4999, "🅿 Parking time is almost up", "Your parking meter is about to expire. Tap to navigate to your car.", urgent = true, tab = 10, sub = 2)
     }
 }

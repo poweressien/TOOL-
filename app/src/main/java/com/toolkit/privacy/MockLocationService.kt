@@ -24,6 +24,12 @@ import kotlinx.coroutines.launch
 
 /** Feeds a test GPS position via Android's mock-location developer option. */
 class MockLocationService : Service() {
+    companion object {
+        /** Last position that was being fed, so the master switch can resume it. */
+        @Volatile var lastLat = 0.0
+        @Volatile var lastLon = 0.0
+    }
+
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var job: Job? = null
     private val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
@@ -33,6 +39,7 @@ class MockLocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val lat = intent?.getDoubleExtra("lat", 0.0) ?: 0.0
         val lon = intent?.getDoubleExtra("lon", 0.0) ?: 0.0
+        lastLat = lat; lastLon = lon
 
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(

@@ -295,6 +295,7 @@ object BioStore {
 
 class BioAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
+        if (!MasterSwitch.isOn(ctx)) return   // paused: the daily alarm is re-armed when the master switch comes back on
         val pending = goAsync()
         Thread {
             try { BioStore.syncSteps(ctx.applicationContext) } catch (e: Exception) { }

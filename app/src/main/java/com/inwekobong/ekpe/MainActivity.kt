@@ -11,7 +11,10 @@ import android.provider.MediaStore
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
+import com.toolkit.privacy.MasterSwitch
+import com.toolkit.privacy.ThemeStore
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -42,8 +45,16 @@ class MainActivity : FragmentActivity() {
     private lateinit var tabs: LinearLayout
     private lateinit var tabScroll: HorizontalScrollView
 
+    private var seenTheme = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ThemeStore.init(this)
+        seenTheme = ThemeStore.version
+        if (!MasterSwitch.isOn(this)) {   // master switch is off: EKPE tools must not run
+            toast("EKPE is paused. Turn the master switch on first.")
+            finish(); return
+        }
         tf = FontStore.load(prefs().getString("font_app", null))
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(C.BG) }
         frame = FrameLayout(this)
@@ -56,15 +67,35 @@ class MainActivity : FragmentActivity() {
         tabScroll = HorizontalScrollView(this).apply { setBackgroundColor(C.CARD); isHorizontalScrollBarEnabled = false; addView(tabs) }
         root.addView(tabScroll)
         setContentView(root)
+        val th = ThemeStore.current
+        window.statusBarColor = th.bg
+        window.navigationBarColor = th.card
+        WindowCompat.getInsetsController(window, root).apply { isAppearanceLightStatusBars = !th.dark; isAppearanceLightNavigationBars = !th.dark }
         show(prefs().getInt("tab", 0))
         handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); handleIntent(intent) }
 
+    override fun onResume() {
+        super.onResume()
+        if (!MasterSwitch.isOn(this)) { finish(); return }          // paused from the main screen
+        if (ThemeStore.version != seenTheme) recreate()               // colours were changed in Settings
+    }
+
     private fun handleIntent(i: Intent?) {
         i?.getStringExtra("delete_uri")?.let { requestDelete(Uri.parse(it)); i.removeExtra("delete_uri") }
-        i?.getIntExtra("tab", -1)?.takeIf { it >= 0 && it < names.size - 1 }?.let { show(it) }
+        i?.getIntExtra("tab", -1)?.takeIf { it >= 0 && it < names.size - 1 }?.let { t ->
+            show(t)
+            // a home-screen tile for one Guard / Labs tool opens that tool directly
+            i?.getStringExtra("tool")?.let { name ->
+                when (t) {
+                    8 -> guard?.openByTitle(name)
+                    9 -> labs?.openByTitle(name)
+                    else -> {}
+                }
+            }
+        }
     }
 
     /** Last tab = "◀ Toolkit": return to the main Privacy Toolkit screen (EKPE is one app with it). */

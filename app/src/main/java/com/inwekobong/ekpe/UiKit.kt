@@ -10,12 +10,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 
+/** Colours come from the app-wide theme (Powder Black, Butter White, System or Custom). */
 object C {
-    val BG = 0xFF0F1220.toInt()
-    val CARD = 0xFF1B2036.toInt()
-    val ACC = 0xFF4F8CFF.toInt()
-    val TXT = 0xFFE8EAF2.toInt()
-    val SUB = 0xFF9AA3B8.toInt()
+    val BG: Int get() = com.toolkit.privacy.ThemeStore.current.bg
+    val CARD: Int get() = com.toolkit.privacy.ThemeStore.current.card
+    val ACC: Int get() = com.toolkit.privacy.ThemeStore.current.accent
+    val TXT: Int get() = com.toolkit.privacy.ThemeStore.current.text
+    val SUB: Int get() = com.toolkit.privacy.ThemeStore.current.sub
+    val ON_ACC: Int get() = com.toolkit.privacy.ThemeStore.current.onAccent
 }
 
 data class Row(val k: String, val v: String = "", val url: String? = null, val header: Boolean = false)
@@ -31,7 +33,7 @@ fun Context.tv(text: String, size: Float = 14f, color: Int = C.TXT, bold: Boolea
 }
 
 fun Context.button(text: String, onClick: () -> Unit) = Button(this).apply {
-    this.text = text; isAllCaps = false; setTextColor(0xFFFFFFFF.toInt())
+    this.text = text; isAllCaps = false; setTextColor(C.ON_ACC)
     background = round(C.ACC, dp(10)); setOnClickListener { onClick() }
     minHeight = 0; minimumHeight = dp(40)
 }

@@ -11,10 +11,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # Chaquopy (the on-device Python used by EKPE Intel / Script Lab) needs a build-time Python 3.11 (3.12+ has no 32-bit armeabi-v7a build, 3.11 keeps it)
+      # Chaquopy (the on-device Python used by EKPE Intel / Script Lab) needs a build-time Python 3.12
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9

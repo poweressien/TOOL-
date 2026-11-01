@@ -27,7 +27,7 @@ for w in sorted(r["wifi"], key=lambda w: -w["r"])[:5]:
     override fun view(): View {
         val p = a.page()
         p.add(a.tv("Script Lab", 20f, C.TXT, true), 0)
-        p.add(a.tv("Python 3.11 on the phone. Use radar() for live Radar data and notify(title, text) for an alert. Packages are limited to what is bundled (requests, beautifulsoup4, dnspython, phonenumbers, openpyxl…). A script can't be stopped once it starts, so avoid endless loops.", 12f, C.SUB), 4)
+        p.add(a.tv("Python 3.12 on the phone. Use radar() for live Radar data and notify(title, text) for an alert. Packages are limited to what is bundled (requests, beautifulsoup4, dnspython, phonenumbers, openpyxl…). A script can't be stopped once it starts, so avoid endless loops.", 12f, C.SUB), 4)
         code = a.edit("Type Python here").apply { typeface = Typeface.MONOSPACE; minLines = 8; gravity = android.view.Gravity.TOP; setText(example); textSize = 13f }
         p.add(code, 10)
         val r = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
