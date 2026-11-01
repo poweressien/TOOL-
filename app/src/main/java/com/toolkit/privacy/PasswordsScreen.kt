@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -115,7 +116,7 @@ fun PasswordsScreen() {
     var breach by remember { mutableStateOf("") }
     var checking by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("PasswordsScreen1")), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Passwords", style = MaterialTheme.typography.headlineSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Generator") })

@@ -17,8 +17,8 @@ android {
         applicationId = "com.toolkit.privacy"
         minSdk = 26            // EKPE needs 26 (PrivacyToolkit alone was 24)
         targetSdk = 34
-        versionCode = 5
-        versionName = "4.0"
+        versionCode = 7
+        versionName = "4.2"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 

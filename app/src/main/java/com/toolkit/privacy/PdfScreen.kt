@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color as AColor
@@ -156,7 +157,7 @@ fun PdfScreen() {
     }
     val modes = listOf("img2pdf" to "Images → PDF", "pdf2img" to "PDF → images", "merge" to "Merge PDFs", "split" to "Split PDF")
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("PdfScreen1")), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("PDF toolkit", style = MaterialTheme.typography.headlineSmall)
         Text("All offline. Merge and split re-render pages as images, so text becomes non-selectable.", style = MaterialTheme.typography.bodySmall)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

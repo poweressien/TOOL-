@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AColor
@@ -78,7 +79,7 @@ fun QrScreen() {
         results = listOf(Result(f.name, f, 0, f.length(), "image/png"))
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("QrScreen1")), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("QR tool", style = MaterialTheme.typography.headlineSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Scan", "Text / URL", "Wi-Fi").forEachIndexed { i, l ->

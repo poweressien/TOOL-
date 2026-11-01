@@ -23,7 +23,8 @@ data class WifiLink(
 data class ApDetail(
     val ssid: String, val bssid: String, val rssi: Int, val freq: Int, val channel: Int, val band: String,
     val widthMhz: Int, val centerMhz: Int, val standard: String, val security: String, val caps: String,
-    val vendor: String?, val distanceM: Double, val wps: Boolean, val connected: Boolean, val ageSec: Long, val randomBssid: Boolean
+    val vendor: String?, val distanceM: Double, val wps: Boolean, val connected: Boolean, val ageSec: Long, val randomBssid: Boolean,
+    val ext: ApExt = ApExt(), val passpoint: Boolean = false
 )
 
 data class ChannelScore(val channel: Int, val aps: Int, val congestion: Int)
@@ -72,15 +73,21 @@ object WifiPro {
         return results.map { r ->
             val width = if (Build.VERSION.SDK_INT >= 23) widthOf(r.channelWidth) else 20
             val center = if (Build.VERSION.SDK_INT >= 23 && r.centerFreq0 > 0 && width > 20) r.centerFreq0 else r.frequency
-            val std = if (Build.VERSION.SDK_INT >= 30) standardOf(r.wifiStandard) else "?"
             val caps = r.capabilities ?: ""
             val bssid = r.BSSID ?: ""
+            val sec = secOf(caps)
+            val band = bandOf(r.frequency)
+            val blank = (r.SSID ?: "").isBlank()
+            val ext = WifiIe.parse(r, sec, band, blank)
+            val stdApi = if (Build.VERSION.SDK_INT >= 30) standardOf(r.wifiStandard) else "?"
+            val std = if (stdApi == "?" && ext.gen.isNotEmpty()) ext.gen else stdApi
+            val vendor = MacVendor.offlineLookup(bssid) ?: ext.wpsMaker.ifBlank { null }
             ApDetail(
                 ssid = (r.SSID ?: "").ifBlank { "(hidden)" }, bssid = bssid, rssi = r.level, freq = r.frequency,
-                channel = channelOf(r.frequency), band = bandOf(r.frequency), widthMhz = width, centerMhz = center, standard = std,
-                security = secOf(caps), caps = caps, vendor = MacVendor.offlineLookup(bssid), distanceM = distance(r.frequency, r.level),
-                wps = caps.contains("WPS"), connected = bssid == cur, ageSec = max(0L, (nowUs - r.timestamp) / 1_000_000),
-                randomBssid = bssid.isNotEmpty() && MacVendor.isRandom(bssid)
+                channel = channelOf(r.frequency), band = band, widthMhz = width, centerMhz = center, standard = std,
+                security = sec, caps = caps, vendor = vendor, distanceM = distance(r.frequency, r.level),
+                wps = caps.contains("WPS") || ext.wpsState.isNotEmpty(), connected = bssid == cur, ageSec = max(0L, (nowUs - r.timestamp) / 1_000_000),
+                randomBssid = bssid.isNotEmpty() && MacVendor.isRandom(bssid), ext = ext, passpoint = ext.passpoint
             )
         }.distinctBy { it.bssid }.sortedByDescending { it.rssi }
     }
@@ -164,7 +171,8 @@ object WifiPro {
         aps.filter { it.security == "Open" && it.ssid != "(hidden)" }.take(6).forEach { out += "Open network \"${it.ssid}\" (no encryption) at ${it.rssi} dBm." }
         aps.filter { it.security.startsWith("WEP") }.forEach { out += "\"${it.ssid}\" uses WEP: crackable in minutes." }
         aps.filter { it.security.startsWith("WPA (weak)") }.forEach { out += "\"${it.ssid}\" uses legacy WPA/TKIP." }
-        aps.filter { it.wps && it.rssi > -80 }.take(5).forEach { out += "\"${it.ssid}\" has WPS enabled (PIN attacks possible)." }
+        aps.filter { it.wps && it.rssi > -80 }.take(5).forEach { out += "\"${it.ssid}\" has WPS enabled" + (if (it.ext.wpsLocked) " (locked)." else " and unlocked: PIN attacks possible.") }
+        aps.filter { it.security.startsWith("WPA3") && it.ext.parsed && it.ext.pmf == "off" }.take(3).forEach { out += "\"${it.ssid}\" advertises WPA3 without protected management frames." }
         aps.groupBy { it.ssid }.filter { it.key != "(hidden)" && it.value.size > 1 }.forEach { (ssid, list) ->
             val secs = list.map { it.security }.distinct()
             if (secs.size > 1) out += "Possible evil twin: \"$ssid\" appears with different security (${secs.joinToString(" / ")}). Do not join the weaker one."

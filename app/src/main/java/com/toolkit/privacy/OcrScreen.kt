@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -60,7 +61,7 @@ fun OcrScreen() {
         if (uri != null) ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("OcrScreen1")), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Offline OCR", style = MaterialTheme.typography.headlineSmall)
         Text("Extract text from photos and screenshots on-device (Latin scripts: English, Pidgin, French, Spanish…). Nothing is uploaded.", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -78,7 +79,7 @@ fun DevUtilsScreen() {
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("DevUtilsScreen1")), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Dev utilities", style = MaterialTheme.typography.headlineSmall)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(listOf("JSON", "Base64", "Hash", "URL", "Color", "Time / UUID", "More")) { t ->

@@ -101,12 +101,78 @@ object TowerDb {
         val r = FloatArray(1); Location.distanceBetween(a.latitude, a.longitude, lat, lon, r); return r[0].toDouble()
     }
 
+    /** Offline database first, then the OpenCelliD online lookup (cached) when the user saved a key. */
+    fun resolve(c: Context, mcc: String, mnc: String, lac: Long, cell: Long): Triple<Double, Double, Int>? {
+        val m = mcc.toIntOrNull() ?: return null
+        val n = mnc.toIntOrNull() ?: return null
+        return find(c, m, n, cell) ?: TowerOnline.get(c, m, n, lac, cell)
+    }
+
     /** Used by RadarEngine: true distance in metres + a bearing label, or null if unknown. */
     fun locate(c: Context, mcc: String, mnc: String, cell: Long): Pair<Double, String>? {
         val t = find(c, mcc.toIntOrNull() ?: return null, mnc.toIntOrNull() ?: return null, cell) ?: return null
         val me = phone(c) ?: return null
         val b = bearing(me, t.first, t.second)
         return Pair(distance(me, t.first, t.second), "${b.second} ${b.first.roundToInt()}°")
+    }
+}
+
+/** Per-tower lookup against api.opencellid.org with a persistent cache. Needs the key saved in Tower Locator. */
+object TowerOnline {
+    private val mem = HashMap<String, Triple<Double, Double, Int>?>()
+    private val tried = HashMap<String, Long>()
+    private val busy = HashSet<String>()
+    private var loaded = false
+
+    private fun cacheFile(c: Context) = File(c.filesDir, "tower_cache.json")
+
+    @Synchronized private fun load(c: Context) {
+        if (loaded) return
+        loaded = true
+        runCatching {
+            val o = JSONObject(cacheFile(c).readText())
+            for (k in o.keys()) { val a = o.getJSONArray(k); mem[k] = Triple(a.getDouble(0), a.getDouble(1), a.getInt(2)) }
+        }
+    }
+
+    @Synchronized private fun save(c: Context) {
+        runCatching {
+            val o = JSONObject()
+            for ((k, v) in mem) if (v != null) o.put(k, org.json.JSONArray().put(v.first).put(v.second).put(v.third))
+            cacheFile(c).writeText(o.toString())
+        }
+    }
+
+    /** Returns the cached position now; starts a background fetch when it is unknown. */
+    fun get(c: Context, mcc: Int, mnc: Int, lac: Long, cell: Long): Triple<Double, Double, Int>? {
+        val ctx = c.applicationContext
+        val key = "$mcc-$mnc-$cell"
+        load(ctx)
+        synchronized(this) {
+            mem[key]?.let { return it }
+            val k = ctx.prefs().getString("ocid_key", "").orEmpty()
+            if (k.isEmpty() || cell <= 0L) return null
+            val now = SystemClock.elapsedRealtime()
+            if (key in busy || now - (tried[key] ?: -1_000_000L) < 600_000L) return null
+            tried[key] = now; busy.add(key)
+        }
+        Thread {
+            try {
+                val k = ctx.prefs().getString("ocid_key", "").orEmpty()
+                val u = "https://opencellid.org/cell/get?key=$k&mcc=$mcc&mnc=$mnc&lac=$lac&cellid=$cell&format=json"
+                val con = URL(u).openConnection() as HttpURLConnection
+                con.connectTimeout = 8000; con.readTimeout = 8000
+                if (con.responseCode == 200) {
+                    val j = JSONObject(con.inputStream.bufferedReader().readText())
+                    if (j.has("lat") && j.has("lon")) {
+                        synchronized(this) { mem[key] = Triple(j.getDouble("lat"), j.getDouble("lon"), j.optInt("range", 0)) }
+                        save(ctx)
+                    }
+                }
+            } catch (e: Exception) { }
+            synchronized(this) { busy.remove(key) }
+        }.start()
+        return null
     }
 }
 
@@ -155,7 +221,7 @@ class TowerLocatorSection(private val a: MainActivity) : Tool {
             if (cells == null || cells.length() == 0) rows += Row("Cells", "No cell info yet (Radar needs a few seconds, plus phone permission).")
             else for (i in 0 until cells.length()) {
                 val c = cells.getJSONObject(i)
-                val t = TowerDb.find(a, c.optString("mcc").toIntOrNull() ?: 0, c.optString("mnc").toIntOrNull() ?: 0, c.optLong("id"))
+                val t = TowerDb.resolve(a, c.optString("mcc"), c.optString("mnc"), c.optLong("area"), c.optLong("id"))
                 val title = (if (c.optBoolean("reg")) "Serving " else "Neighbor ") + c.optString("rat")
                 if (t == null) rows += Row(title, "Not in database (cell ${c.optLong("id")})")
                 else {

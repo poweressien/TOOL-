@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.app.Activity
 import android.content.Intent
 import android.net.VpnService
@@ -151,7 +152,7 @@ fun VpnScreen() {
     }
 
     Column(
-        Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
+        Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberPersistedScroll("VpnScreen1")),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Box(

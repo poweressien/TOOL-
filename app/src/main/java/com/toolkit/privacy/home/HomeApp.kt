@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Row
@@ -42,11 +43,17 @@ import androidx.fragment.app.FragmentActivity
 import com.toolkit.privacy.*
 import com.toolkit.privacy.core.*
 
+private val subPages = setOf("sounds", "live", "hidden")
+
 @Composable
 fun App(route: Route?) {
     val ctx = LocalContext.current
-    var tool by remember { mutableStateOf<ToolDef?>(null) }
-    var page by remember { mutableStateOf("home") }
+    // Reopening the app lands on the exact tool / page that was open when it was left.
+    var tool by rememberSaveable(stateSaver = androidx.compose.runtime.saveable.Saver<ToolDef?, String>(
+        save = { it?.name ?: "" }, restore = { n -> Catalog.tools.firstOrNull { !it.ekpe && it.name == n } })
+    ) { mutableStateOf(Catalog.tools.firstOrNull { !it.ekpe && it.name == ScrollMemory.lastTool(ctx) }) }
+    var page by rememberSaveable { mutableStateOf(ScrollMemory.lastPage(ctx)) }
+    LaunchedEffect(tool, page) { ScrollMemory.saveLocation(ctx, tool?.name ?: "", page) }
     var pendingUrl by remember { mutableStateOf<String?>(null) }
     var pendingText by remember { mutableStateOf<String?>(null) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -88,7 +95,7 @@ fun App(route: Route?) {
     }
 
     BackHandler(enabled = tool != null || page != "home") {
-        if (tool != null) tool = null else page = "home"
+        if (tool != null) tool = null else page = if (page in subPages) "settings" else "home"
     }
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
 
@@ -140,14 +147,17 @@ fun App(route: Route?) {
                 }
                 page == "home" -> {
                     AppTopBar("EKPE", "menu") { scope.launch { drawerState.open() } }
-                    Box(Modifier.weight(1f).fillMaxSize()) { HomeScreen { openTool(it) } }
+                    Box(Modifier.weight(1f).fillMaxSize()) { LiveBackground(); HomeScreen { openTool(it) } }
                 }
                 else -> {
-                    val title = when (page) { "settings" -> "Settings"; "appearance" -> "Appearance"; "about" -> "About"; else -> "Developer" }
-                    AppTopBar(title, "arrow_back") { page = "home" }
+                    val title = when (page) { "settings" -> "Settings"; "appearance" -> "Appearance"; "sounds" -> "Notification sound"; "live" -> "Live background"; "hidden" -> "Hidden apps"; "about" -> "About"; else -> "Developer" }
+                    AppTopBar(title, "arrow_back") { page = if (page in subPages) "settings" else "home" }
                     Box(Modifier.weight(1f).fillMaxSize()) {
                         when (page) {
-                            "settings" -> SettingsPage { page = "appearance" }
+                            "settings" -> SettingsPage({ page = "appearance" }, { page = "sounds" }, { page = "live" }, { page = "hidden" })
+                            "live" -> LiveBgPage()
+                            "hidden" -> HiddenAppsPage()
+                            "sounds" -> SoundsPage()
                             "appearance" -> AppearancePage()
                             "about" -> AboutPage()
                             else -> DeveloperPage()
@@ -163,7 +173,7 @@ fun App(route: Route?) {
 @Composable
 private fun ToolContent(t: ToolDef, pendingUrl: String?, clearUrl: () -> Unit, pendingText: String?, clearText: () -> Unit) {
     when (t.tab) {
-        0 -> HtmlRunnerScreen()
+        0 -> if (t.sub == 1) AppForgeScreen() else HtmlRunnerScreen()
         1 -> when (t.sub) { 0 -> CompressScreen(); 1 -> PdfScreen(); 2 -> EncryptScreen(); 3 -> MetadataScreen(); 4 -> OcrScreen(); 5 -> CleanerScreen(); else -> SmartFilesScreen() }
         2 -> when (t.sub) { 0 -> SignalScreen(); 1 -> SpeedScreen(); 2 -> WifiAnalyzerScreen(); 3 -> ToolboxScreen(); 4 -> DataUsageScreen(); 5 -> LanScreen(); 6 -> WifiProScreen(); else -> IntelScreen() }
         3 -> when (t.sub) { 0 -> VpnScreen(); 1 -> ShieldScreen(); 2 -> AuditScreen(); 3 -> PasswordsScreen(); else -> VaultScreen() }

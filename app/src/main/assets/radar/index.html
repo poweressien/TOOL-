@@ -42,6 +42,15 @@ td{padding:8px;border-top:1px solid var(--ln);white-space:nowrap}
 #sp{width:100%;height:70px;display:block}
 .kv{display:grid;grid-template-columns:1fr auto;gap:0}.kv div{padding:7px 0;border-top:1px solid var(--ln)}.kv div:nth-child(2n){text-align:right}.kv div:nth-child(-n+2){border-top:0}
 .em{height:10px;border-radius:9px;background:#1d2a4a;overflow:hidden;margin:8px 0}.em i{display:block;height:100%;transition:width .4s}
+.tw{border:1px solid var(--ln);border-radius:14px;background:var(--pn);padding:12px;margin-bottom:10px}
+.tw.vc{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+.tw h3{font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vcb{background:var(--bad);color:#fff;font:800 11px system-ui;padding:3px 8px;border-radius:99px;letter-spacing:.04em}
+.vcb.p{background:var(--wa);color:#222}
+.big{font-size:24px;font-weight:700;margin:6px 0 2px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin-top:8px;font-size:12px}.g2 span{color:var(--mu)}.g2 b{font-weight:600;float:right}
+.nt{font-size:11px;color:var(--mu);margin-top:6px}
+.fm{display:flex;gap:6px;margin-top:8px}.fm input{flex:1;padding:9px;border-radius:9px;border:1px solid var(--ln);background:var(--bg);color:var(--tx)}.fm button{padding:9px 12px;border:0;border-radius:9px;background:var(--ac);color:#fff;font-weight:700}
 </style></head><body>
 <header><i class="dot"></i><h1>EKPE Radar</h1><span id="st">connecting…</span></header>
 <nav id="nav"></nav>
@@ -49,7 +58,7 @@ td{padding:8px;border-top:1px solid var(--ln);white-space:nowrap}
 <section id="radar">
  <div class="card"><canvas id="cv"></canvas>
   <div class="lg"><span style="color:var(--wf)">● Wi-Fi</span><span style="color:var(--bt)">● Bluetooth</span><span style="color:var(--wa)">● Cell tower</span><span style="color:var(--ok)">◉ You</span></div>
-  <small style="display:block;text-align:center;margin-top:6px">Rings mark 1 m, 10 m, 100 m and 1 km (log scale). Direction is not measured, so angles only separate devices.</small></div>
+  <small style="display:block;text-align:center;margin-top:6px">Rings mark 1 m, 10 m, 100 m and 1 km (log scale). Towers found in the tower database sit at their real compass bearing (north is up). Everything else has no known direction, so its angle only keeps dots apart. Wi-Fi and Bluetooth distances are signal-strength estimates.</small></div>
  <div class="card"><div class="k">Electromagnetic field (magnetometer)</div><div id="emf"></div>
   <small>Picks up magnets, motors, power lines and strong transmitters. Phones cannot sense ionizing radiation, so this is not a radiation detector.</small></div>
  <div class="card"><div class="k">Closest to you</div><div id="near"></div></div>
@@ -58,6 +67,7 @@ td{padding:8px;border-top:1px solid var(--ln);white-space:nowrap}
   <label>Electromagnetic spike sensitivity: <b id="ev"></b> µT change<input type="range" id="er" min="5" max="80"></label>
   <button class="btn" onclick="window.Native&&Native.test()">Send test notification</button></div>
 </section>
+<section id="twr" hidden></section>
 <section id="tbl" hidden><input id="q" placeholder="Filter by name, brand, address…" oninput="q=this.value.toLowerCase();rt()"><div class="wrap" id="t"></div></section>
 <section id="sig" hidden></section>
 <section id="log" hidden></section>
@@ -82,7 +92,7 @@ const col=p=>p>66?'var(--ok)':p>33?'var(--wa)':'var(--bad)';
 const sg=(dbm,p)=>`${dbm} dBm<span class="bar"><i style="width:${p}%;background:${col(p)}"></i></span> ${p}%`;
 const wpct=r=>Math.max(0,Math.min(100,(r+100)*2));
 const bpct=r=>Math.max(0,Math.min(100,Math.round((r+100)*100/60)));
-const op=c=>MNC[c.mcc+'-'+parseInt(c.mnc)]||('Unknown ('+c.mcc+'-'+c.mnc+')');
+const op=c=>c.op||MNC[c.mcc+'-'+parseInt(c.mnc)]||('Operator '+c.mcc+'-'+c.mnc);
 const vend=w=>{const m=(w.b||'').slice(0,8).toUpperCase();if(OUI[m])return OUI[m];for(const[r,n]of SS)if(r.test(w.s||''))return n;return /^.[26AE]/i.test(w.b||'')?'Private / randomized':'Unknown'};
 const bbrand=b=>CO[b.co]||(b.co>=0?'Company 0x'+b.co.toString(16):'Unknown');
 const btype=b=>{const n=(b.n||'').toLowerCase(),u=b.u||[];
@@ -95,9 +105,6 @@ const btype=b=>{const n=(b.n||'').toLowerCase(),u=b.u||[];
  if(b.co===76)return'Apple device';if(b.co===117)return'Samsung device';return'Unknown'};
 
 const T={
- cell:{c:['Status','Tech','Operator (owner)','MCC-MNC','Cell ID','TAC / LAC','PCI','Channel','Signal','Distance'],def:9,
-  r:()=>D.cells.map(x=>({v:[x.reg?tg('Serving','g'):tg('Neighbor','m'),x.rat,esc(op(x)),x.mcc+'-'+x.mnc,x.id,x.area,x.pci,x.ch,sg(x.dbm,x.pct),dist(x.d)+' <small>'+(x.src=='DB'?'tower database'+(x.brg?' · '+x.brg:''):x.src=='TA'?'timing':'estimate')+'</small>'],
-   s:[x.reg?0:1,x.rat,op(x),x.mcc+x.mnc,x.id,x.area,x.pci,x.ch,-x.dbm,x.d]}))},
  wifi:{c:['Network','Vendor','MAC','Signal','Distance','Band · channel · width','Security','Standard'],def:4,
   r:()=>D.wifi.map(w=>({v:[esc(w.s||'‹hidden›')+(w.c?' '+tg('Connected','g'):''),esc(vend(w)),w.b,sg(w.r,wpct(w.r)),dist(w.d),(w.f>5900?'6':w.f>4900?'5':'2.4')+' GHz · ch '+w.ch+' · '+w.w+' MHz',tg(w.sec,w.sec=='Open'?'r':w.sec=='WEP'?'a':'g'),STD[w.std]||'—'],
    s:[w.s||'',vend(w),w.b,-w.r,w.d,w.f,w.sec,w.std]}))},
@@ -115,8 +122,9 @@ function rt(){if(!D||!T[tab])return;const k=tab,t=T[k],s=sort[k]||{i:t.def,a:tru
 function all(){const L=[];
  D.wifi.forEach(w=>L.push({k:'w'+w.b,n:w.s||'(hidden network)',t:'Wi-Fi',d:w.d,c:'#5ad1ff'}));
  D.ble.forEach(b=>L.push({k:'b'+b.a,n:b.n||btype(b)+' · '+b.a.slice(-5),t:'Bluetooth',d:b.d,c:'#b794ff'}));
- D.cells.forEach((c,i)=>L.push({k:'c'+i+c.id,n:op(c)+' '+c.rat,t:'Cell tower',d:c.d,c:'#ffb547'}));
+ D.cells.forEach((c,i)=>{if(c.d>=0)L.push({k:'c'+i+c.id,n:op(c)+' '+c.rat+(c.vc==2?' · VERY CLOSE':''),t:'Cell tower · '+SRC[c.src],d:c.d,c:c.vc==2?'#ff6b6b':'#ffb547',deg:c.deg,big:c.reg})});
  return L}
+const SRC={TA:'measured (timing advance)',DB:'tower database',est:'estimate from signal',"n/a":'n/a'};
 const ang=k=>{let h=0;for(const ch of k)h=(h*31+ch.charCodeAt(0))|0;return(Math.abs(h)%3600)/3600*6.2832};
 
 function draw(t){requestAnimationFrame(draw);if(tab!='radar'||!D)return;
@@ -128,7 +136,7 @@ function draw(t){requestAnimationFrame(draw);if(tab!='radar'||!D)return;
  const a=(t/1600)%6.2832;
  if(x.createConicGradient){const g=x.createConicGradient(a-1.2,0,0);g.addColorStop(0,'rgba(94,230,168,0)');g.addColorStop(.19,'rgba(94,230,168,.32)');g.addColorStop(.2,'rgba(94,230,168,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,R,0,7);x.fill()}
  x.strokeStyle='#5ee6a8';x.beginPath();x.moveTo(0,0);x.lineTo(Math.cos(a)*R,Math.sin(a)*R);x.stroke();
- all().forEach(o=>{const th=ang(o.k),r=rr(o.d);x.fillStyle=o.c;x.shadowColor=o.c;x.shadowBlur=8*s;x.beginPath();x.arc(Math.cos(th)*r,Math.sin(th)*r,3.5*s,0,7);x.fill()});
+ all().forEach(o=>{const th=o.deg!=null?(o.deg-90)*Math.PI/180:ang(o.k),r=rr(o.d);x.fillStyle=o.c;x.shadowColor=o.c;x.shadowBlur=8*s;x.beginPath();x.arc(Math.cos(th)*r,Math.sin(th)*r,(o.big?5:3.5)*s,0,7);x.fill()});
  x.shadowBlur=0;x.fillStyle='#5ee6a8';x.beginPath();x.arc(0,0,5*s,0,7);x.fill()}
 
 function rradar(){
@@ -136,6 +144,27 @@ function rradar(){
  $('#emf').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:26px;font-weight:700">${D.emf.toFixed(1)} µT</span><span style="color:var(--${lv[1]});font-weight:700">${lv[0]}</span></div><div class="em"><i style="width:${Math.min(100,D.emf/2)}%;background:var(--${lv[1]})"></i></div><small>Normal level for here: ${D.base.toFixed(1)} µT · change ${dl.toFixed(1)} µT</small>`;
  const n=all().sort((a,b)=>a.d-b.d).slice(0,6);
  $('#near').innerHTML=n.length?n.map(o=>`<div class="row"><span style="color:${o.c}">●</span><div class="g"><div>${esc(o.n)}</div><small>${o.t}</small></div><div>${dist(o.d)}</div></div>`).join(''):'<span class="mu">Scanning…</span>'}
+
+
+const dv=c=>c.d<0?'n/a':c.src=='TA'?(c.dmin==0?'under '+fd(c.dmax):fd(c.dmin)+' – '+fd(c.dmax))+' <small>(timing advance, measured)</small>':fd(c.d)+' <small>'+(c.src=='DB'?'(from tower location)':'(estimate, may be off by km)')+'</small>';
+const nv=(v,u)=>v==null||v===''||v>2e9?'n/a':v+(u||'');
+function twCard(c){
+ const p=c.vc==2?'<span class="vcb">VERY CLOSE (&lt;200 m)</span>':c.vc==1?'<span class="vcb p">PROBABLY VERY CLOSE (strong signal, estimate)</span>':'';
+ const rows=[['Technology',c.rat],['Band',nv(c.band)],['Channel (ARFCN)',nv(c.ch)],['MCC-MNC',c.mcc+'-'+c.mnc],['Cell ID',nv(c.id)],
+  ['eNodeB / sector',c.enb!=null?c.enb+' / '+c.sec:'n/a'],['TAC / LAC',nv(c.area)],['PCI / PSC / BSIC',nv(c.pci)],
+  ['Signal',c.ok?c.dbm+' dBm':'n/a'],['RSRP',nv(c.rsrp,' dBm')],['RSRQ',nv(c.rsrq,' dB')],['SINR',nv(c.snr,' dB')],
+  ['Timing advance',c.ta!=null?c.ta:'n/a'],['Direction',c.brg||'n/a'],['Position',c.lat!=null?c.lat.toFixed(5)+', '+c.lon.toFixed(5):'not in database']];
+ return `<div class="tw${c.vc==2?' vc':''}"><h3>${esc(op(c))} ${tg(c.reg?'Serving':'Neighbor',c.reg?'g':'m')} ${p}</h3>
+ <div class="big">${dv(c)}</div><div>${sg(c.dbm,c.pct)}</div>
+ <div class="g2">${rows.map(r=>`<div><span>${r[0]}</span><b>${esc(r[1])}</b></div>`).join('')}</div>
+ ${c.lat!=null?`<div class="nt">${c.acc?'Position accuracy ±'+c.acc+' m · ':''}crowd-sourced tower position</div>`:''}</div>`}
+function rtw(){
+ const cs=[...D.cells].sort((a,b)=>(b.vc-a.vc)||((b.reg?1:0)-(a.reg?1:0))||(b.dbm-a.dbm));
+ if(!$('#twl')){$('#twr').innerHTML='<div id="twl"></div>'+
+ `<div class="card"><div class="k">How distance is worked out</div><div class="nt" style="margin:0">Timing advance (only the serving LTE/GSM tower reports it) is measured by the modem: one step is 78 m on LTE and 554 m on GSM. Other towers need a position from the tower database (Guard, Tower Locator, or an OpenCelliD key below), then distance and direction come from your GPS. Without either, the distance is a signal-strength estimate and is marked as one. Android does not list towers of networks you are not registered on.</div>
+ <div class="fm"><input id="ok" placeholder="OpenCelliD key (online tower lookup)" value="${esc((window.Native&&Native.getKey&&Native.getKey())||'')}"><button onclick="saveKey()">Save</button></div></div>`}
+ $('#twl').innerHTML=cs.length?cs.map(twCard).join(''):'<div class="card mu">No cell data. Turn on Location, allow Phone permission and insert a SIM. Nothing is simulated here.</div>'}
+function saveKey(){const k=$('#ok').value.trim();window.Native&&Native.setKey&&Native.setKey(k)}
 
 function rsig(){const n=D.net,sv=D.cells.find(c=>c.reg),p=n.type=='Wi-Fi'?(n.pct||0):sv?sv.pct:0;
  const kv=[['Connection',n.type+(n.net?' · internet OK':n.type=='Offline'?'':' · no internet')]];
@@ -158,8 +187,8 @@ function go(k){tab=k;q='';$('#q').value='';render()}
 function render(){if(!D)return;
  $('#b-cell b').textContent=D.cells.length;$('#b-wifi b').textContent=D.wifi.length;$('#b-ble b').textContent=D.ble.length;$('#b-log b').textContent=D.log.length;
  TABS.forEach(([k])=>$('#b-'+k).classList.toggle('on',k==tab));
- $('#radar').hidden=tab!='radar';$('#tbl').hidden=!T[tab];$('#sig').hidden=tab!='sig';$('#log').hidden=tab!='log';
- if(tab=='radar')rradar();else if(T[tab])rt();else if(tab=='sig')rsig();else rlog()}
+ $('#radar').hidden=tab!='radar';$('#twr').hidden=tab!='cell';$('#tbl').hidden=!T[tab];$('#sig').hidden=tab!='sig';$('#log').hidden=tab!='log';
+ if(tab=='radar')rradar();else if(tab=='cell')rtw();else if(T[tab])rt();else if(tab=='sig')rsig();else rlog()}
 
 function poll(){
  if(!window.Native){$('#st').textContent='open inside EKPE';return}

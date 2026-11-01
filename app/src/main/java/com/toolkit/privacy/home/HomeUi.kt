@@ -12,6 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +51,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -138,14 +142,19 @@ fun PausedPanel() {
 // Home: every tool is its own app tile
 // ---------------------------------------------------------------------------------------------
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun ToolTile(t: ToolDef, enabled: Boolean, onClick: () -> Unit) {
+fun ToolTile(t: ToolDef, enabled: Boolean, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val base = Color(t.group.color)
     val lightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
     val tint = if (lightTheme) lerp(base, Color.Black, 0.35f) else base
     Column(
         Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.38f)
-            .clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)
+            .clip(RoundedCornerShape(16.dp)).combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick?.let { lc -> { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); lc() } }
+            )
             .padding(vertical = 8.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -166,12 +175,33 @@ fun HomeScreen(onOpen: (ToolDef) -> Unit) {
     var query by remember { mutableStateOf("") }
     val q = query.trim().lowercase()
     val on = MasterSwitch.on
-    val groups = remember(q) {
+    HomeLayout.ensure(LocalContext.current)
+    var menuFor by remember { mutableStateOf<ToolDef?>(null) }
+    var moveFor by remember { mutableStateOf<ToolDef?>(null) }
+    var infoFor by remember { mutableStateOf<ToolDef?>(null) }
+    menuFor?.let { t -> ToolActionsDialog(t, { menuFor = null }, { onOpen(t) }, { moveFor = t }, { infoFor = t }) }
+    moveFor?.let { t -> RepositionDialog(t) { moveFor = null } }
+    infoFor?.let { t -> ToolDetailsDialog(t) { infoFor = null } }
+    val groups = remember(q, HomeLayout.order, HomeLayout.hidden) {
+        val shown = HomeLayout.visible()
         Group.values().map { g ->
-            g to Catalog.tools.filter { it.group == g && (q.isEmpty() || it.name.lowercase().contains(q) || g.title.lowercase().contains(q)) }
+            g to shown.filter { it.group == g && (q.isEmpty() || it.name.lowercase().contains(q) || g.title.lowercase().contains(q)) }
         }.filter { it.second.isNotEmpty() }
     }
+    // The grid opens exactly where it was left (index + offset are kept on the phone).
+    val ctxNav = LocalContext.current
+    val gridState = rememberLazyGridState(
+        com.toolkit.privacy.core.ScrollMemory.get(ctxNav, "home_idx"),
+        com.toolkit.privacy.core.ScrollMemory.get(ctxNav, "home_off")
+    )
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }.collect { (i, o) ->
+            com.toolkit.privacy.core.ScrollMemory.put(ctxNav, "home_idx", i)
+            com.toolkit.privacy.core.ScrollMemory.put(ctxNav, "home_off", o)
+        }
+    }
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Adaptive(minSize = 84.dp),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
@@ -221,7 +251,7 @@ fun HomeScreen(onOpen: (ToolDef) -> Unit) {
                     )
                 }
             }
-            items(list) { t -> ToolTile(t, on) { onOpen(t) } }
+            items(list, key = { it.name }) { t -> ToolTile(t, on, { menuFor = t }) { onOpen(t) } }
         }
         if (groups.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -239,8 +269,9 @@ fun HomeScreen(onOpen: (ToolDef) -> Unit) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun SettingsPage(openAppearance: () -> Unit) {
+fun SettingsPage(openAppearance: () -> Unit, openSounds: () -> Unit, openLive: () -> Unit, openHidden: () -> Unit) {
     val ctx = LocalContext.current
+    HomeLayout.ensure(ctx); LiveBg.ensure(ctx)
     val on = MasterSwitch.on
     var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(on) { delay(1500); tick++ }
@@ -279,6 +310,56 @@ fun SettingsPage(openAppearance: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth().clickable { openLive() }) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                GlyphIcon("auto_awesome", MaterialTheme.colorScheme.primary, 26.dp)
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text("Live background", fontWeight = FontWeight.Bold)
+                    Text(
+                        "Animated home screen · " + (LiveBg.styles.firstOrNull { it.first == LiveBg.style }?.second ?: "Auto"),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth().clickable { openHidden() }) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                GlyphIcon("visibility_off", MaterialTheme.colorScheme.primary, 26.dp)
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text("Hidden apps", fontWeight = FontWeight.Bold)
+                    Text(
+                        "${HomeLayout.hidden.size} hidden · long-press a tile on home to hide, move or add it to your phone",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth().clickable { openSounds() }) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                GlyphIcon("notifications_active", MaterialTheme.colorScheme.primary, 26.dp)
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text("Notification sound", fontWeight = FontWeight.Bold)
+                    Text(
+                        if (SoundCatalog.soundOn(ctx)) SoundCatalog.selected(ctx).name + " · ${SoundCatalog.all.size} sounds to choose from" else "Off · ${SoundCatalog.all.size} sounds to choose from",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            var splash by remember { mutableStateOf(Prefs.sp(ctx).getBoolean(SplashActivity.PREF_SPLASH, true)) }
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Opening video", fontWeight = FontWeight.Bold)
+                    Text("Play the splash video when the app starts.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = splash, onCheckedChange = { splash = it; Prefs.sp(ctx).edit().putBoolean(SplashActivity.PREF_SPLASH, it).apply() })
             }
         }
 

@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -84,7 +85,7 @@ fun ApiTesterScreen() {
         if (body.isNotEmpty()) append(" -d '${body.replace("'", "'\\''")}'")
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("ApiTesterScreen1")), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("API tester", style = MaterialTheme.typography.headlineSmall)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD")) { m -> FilterChip(selected = method == m, onClick = { method = m }, label = { Text(m) }) }

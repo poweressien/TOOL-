@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -136,7 +137,7 @@ fun SensorLabScreen() {
         onDispose { sm.unregisterListener(l) }
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("SensorLabScreen1")), verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Sensor lab", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.align(Alignment.Start))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(listOf("Compass", "Level", "Barometer", "Light", "Magnetic", "Motion")) { m ->

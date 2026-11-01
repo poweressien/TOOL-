@@ -110,7 +110,7 @@ object AutomationEngine {
                     val num = r.phone.filter { it.isDigit() }
                     val i = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$num?text=" + Uri.encode(text))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     GuardNotify.channels(c)
-                    val n = Notification.Builder(c, "guard_alerts").setSmallIcon(android.R.drawable.ic_dialog_email).setContentTitle("Rule: ${r.name}").setContentText("Tap to send the WhatsApp message")
+                    val n = Notification.Builder(c, com.toolkit.privacy.SoundCatalog.alertChannel(c, "guard_alerts", "Guard alerts")).setSmallIcon(android.R.drawable.ic_dialog_email).setContentTitle("Rule: ${r.name}").setContentText("Tap to send the WhatsApp message")
                         .setContentIntent(PendingIntent.getActivity(c, (now % 1000).toInt(), i, PendingIntent.FLAG_IMMUTABLE)).setAutoCancel(true).build()
                     c.getSystemService(android.app.NotificationManager::class.java).notify(9600 + (now % 300).toInt(), n)
                     runCatching { c.startActivity(i) }   // only works while the app is on screen; Android blocks it from the background

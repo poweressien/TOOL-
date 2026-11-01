@@ -102,6 +102,7 @@ class MainActivity : FragmentActivity() {
             val sub = i?.getIntExtra("sub", -1) ?: -1
             if (sub >= 0) {
                 when (t) { 8 -> guard?.openAt(sub); 9 -> labs?.openAt(sub) }
+                com.toolkit.privacy.home.Catalog.find(t, sub)?.let { titleTv.text = it.name }
                 i?.removeExtra("sub")
             }
         }
@@ -140,7 +141,10 @@ class MainActivity : FragmentActivity() {
     fun pickFile(then: (Uri?) -> Unit) { pickCb = then; pickLauncher.launch(arrayOf("*/*")) }
     fun saveFile(name: String, then: (Uri?) -> Unit) { saveCb = then; saveLauncher.launch(name) }
 
-    override fun onPause() { guard?.stopAll(); labs?.stopAll(); super.onPause() }
+    override fun onPause() {
+        guard?.saveScroll(); labs?.saveScroll()
+        guard?.stopAll(); labs?.stopAll(); super.onPause()
+    }
 
     fun signInDrive(then: (Boolean) -> Unit) {
         signCb = then

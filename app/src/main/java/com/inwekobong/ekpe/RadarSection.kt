@@ -67,6 +67,8 @@ class RadarSection(private val a: MainActivity) {
     inner class Bridge {
         @JavascriptInterface fun snapshot(): String = RadarEngine.snapshot()
         @JavascriptInterface fun test() { RadarEngine.notify("EKPE Radar test", "Alerts are working. You will get a pop-up when something new shows up nearby.") }
+        @JavascriptInterface fun getKey(): String = a.prefs().getString("ocid_key", "") ?: ""
+        @JavascriptInterface fun setKey(k: String) { a.prefs().edit().putString("ocid_key", k.trim()).apply() }
         @JavascriptInterface fun cfg(r: Int, e: Int) { RadarEngine.cfg(r, e) }
     }
 }

@@ -31,7 +31,8 @@ class ToolDef(val name: String, val icon: String, val group: Group, val tab: Int
 object Catalog {
     val tools: List<ToolDef> = listOf(
         // Run
-        ToolDef("HTML Runner", "html", Group.DEV, 0),
+        ToolDef("AppForge", "apps", Group.DEV, 0, 1),
+        ToolDef("HTML Runner", "html", Group.DEV, 0, 0),
 
         // Files & Media (old tab 1)
         ToolDef("Compress", "compress", Group.FILES, 1, 0),
@@ -129,7 +130,6 @@ object Catalog {
         ToolDef("Network Toolkit", "dns", Group.GUARD, 8, 3, true),
         ToolDef("App Privacy Audit", "privacy_tip", Group.GUARD, 8, 4, true),
         ToolDef("Private Vault", "inventory_2", Group.GUARD, 8, 5, true),
-        ToolDef("Sound Lab", "mic", Group.GUARD, 8, 6, true),
 
         // EKPE Labs (tab 9, one tile per tool)
         ToolDef("Coverage Mapper", "map", Group.LABS, 9, 0, true),
@@ -144,5 +144,6 @@ object Catalog {
 
     /** Finds the in-app tool for an old (tab, sub) address, used by notifications and the share sheet. */
     fun find(tab: Int, sub: Int): ToolDef? =
-        tools.firstOrNull { !it.ekpe && it.tab == tab && (it.sub == sub || tab == 0 || tab == 9) }
+        tools.firstOrNull { !it.ekpe && it.tab == tab && it.sub == sub }
+            ?: tools.firstOrNull { !it.ekpe && it.tab == tab && (tab == 0 || tab == 9) }
 }

@@ -36,7 +36,6 @@ class MediaWatcherService : Service() {
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
         nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel("watch", "Gallery watcher", NotificationManager.IMPORTANCE_MIN))
-        nm.createNotificationChannel(NotificationChannel("media", "New media", NotificationManager.IMPORTANCE_HIGH))
         startForeground(10, Notification.Builder(this, "watch").setSmallIcon(android.R.drawable.ic_menu_gallery)
             .setContentTitle("Watching gallery for new photos & videos").build())
         val t = HandlerThread("media-watch").also { it.start() }
@@ -90,7 +89,7 @@ class MediaWatcherService : Service() {
 
     private fun notifyNew(uri: Uri, name: String, mime: String, video: Boolean, thumb: Bitmap?) {
         if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED && Build.VERSION.SDK_INT >= 33) return
-        val b = Notification.Builder(this, "media").setSmallIcon(android.R.drawable.ic_menu_upload)
+        val b = Notification.Builder(this, com.toolkit.privacy.SoundCatalog.alertChannel(this, "media", "New media", android.app.NotificationManager.IMPORTANCE_HIGH, false)).setSmallIcon(android.R.drawable.ic_menu_upload)
             .setContentTitle(if (video) "New video captured" else "New photo captured").setContentText(name)
             .setAutoCancel(true)
             .addAction(Notification.Action.Builder(null, "Push to Google Drive", pushIntent(uri, name, mime)).build())
@@ -121,7 +120,7 @@ class MediaWatcherService : Service() {
         Thread {
             try {
                 DriveUploader.upload(this, uri, name, mime)
-                val b = Notification.Builder(this, "media").setSmallIcon(android.R.drawable.stat_sys_upload_done)
+                val b = Notification.Builder(this, com.toolkit.privacy.SoundCatalog.alertChannel(this, "media", "New media", android.app.NotificationManager.IMPORTANCE_HIGH, false)).setSmallIcon(android.R.drawable.stat_sys_upload_done)
                     .setContentTitle("Saved to Google Drive").setContentText(name).setAutoCancel(true)
                 if (prefs().getBoolean("free_local", false)) {
                     val pi = PendingIntent.getActivity(this, uri.hashCode(), Intent(this, MainActivity::class.java)
@@ -131,7 +130,7 @@ class MediaWatcherService : Service() {
                 }
                 nm.notify(uri.hashCode(), b.build())
             } catch (e: Exception) {
-                nm.notify(uri.hashCode(), Notification.Builder(this, "media").setSmallIcon(android.R.drawable.stat_notify_error)
+                nm.notify(uri.hashCode(), Notification.Builder(this, com.toolkit.privacy.SoundCatalog.alertChannel(this, "media", "New media", android.app.NotificationManager.IMPORTANCE_HIGH, false)).setSmallIcon(android.R.drawable.stat_notify_error)
                     .setContentTitle("Drive upload failed").setContentText(e.message ?: "unknown error").build())
             }
         }.start()

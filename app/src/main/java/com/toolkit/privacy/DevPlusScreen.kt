@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -62,7 +63,7 @@ fun SensitiveScreen(initial: String? = null) {
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("DevPlusScreen1")), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Sensitive data scanner", style = MaterialTheme.typography.headlineSmall)
         Hint("Paste text, code, a chat export or open a text file. Finds API keys, passwords, private keys, card numbers (Luhn-checked), BVN/NIN, emails, phone numbers, wallet addresses and random-looking secrets, then masks them so you can share safely. Nothing leaves the phone.")
         OutlinedTextField(text, { text = it; report = null }, Modifier.fillMaxWidth().heightIn(min = 140.dp), label = { Text("Text to check") }, textStyle = MonoStyle)

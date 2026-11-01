@@ -23,7 +23,6 @@ interface Tool {
 object GuardNotify {
     fun channels(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel("guard_alerts", "Guard alerts", NotificationManager.IMPORTANCE_HIGH).apply { enableVibration(true) })
         nm.createNotificationChannel(NotificationChannel("guard_svc", "Guard background watch", NotificationManager.IMPORTANCE_LOW))
     }
 
@@ -32,7 +31,7 @@ object GuardNotify {
         val open = PendingIntent.getActivity(c, 60,
             Intent(c, MainActivity::class.java).putExtra("tab", 8).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val n = Notification.Builder(c, "guard_alerts")
+        val n = Notification.Builder(c, com.toolkit.privacy.SoundCatalog.alertChannel(c, "guard_alerts", "Guard alerts"))
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(title).setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
@@ -64,12 +63,32 @@ open class ToolHome(
 ) {
     private val root = FrameLayout(a).apply { setBackgroundColor(C.BG) }
     private var cur: Tool? = null
+    /** True when a home-screen tile opened a tool straight away: there is no menu to go back to. */
+    var direct = false
+        private set
+    private var scrollView: android.widget.ScrollView? = null
+    private val sp get() = a.getSharedPreferences("ekpe_nav", Context.MODE_PRIVATE)
+    private val key get() = "scroll_$title"
+    private var openIndex = -1
 
     fun view(): View { menu(); return root }
     fun stopAll() { cur?.stop() }
 
     /** Opens the n-th tool straight away (used by the home screen tiles). */
-    fun openAt(index: Int) { items.getOrNull(index)?.let { open(it.third()) } }
+    fun openAt(index: Int) {
+        items.getOrNull(index)?.let { direct = true; openIndex = index; open(it.third()) }
+    }
+
+    /** Remember where the user was scrolled to; called when the screen is left. */
+    fun saveScroll() {
+        val y = scrollView?.scrollY ?: return
+        sp.edit().putInt(key + "_" + openIndex, y).putInt(key + "_idx", openIndex).apply()
+    }
+
+    private fun restoreScroll(sv: android.widget.ScrollView) {
+        val y = sp.getInt(key + "_" + openIndex, 0)
+        if (y > 0) sv.post { sv.scrollTo(0, y) }
+    }
 
     private fun menu() {
         cur?.stop(); cur = null
@@ -83,26 +102,29 @@ open class ToolHome(
             c.setOnClickListener { open(f()) }
             p.add(c, 10)
         }
-        root.removeAllViews(); root.addView(a.scroll(p)); root.applyTypeface(a.tf)
+        val sv = a.scroll(p); scrollView = sv
+        root.removeAllViews(); root.addView(sv); root.applyTypeface(a.tf)
     }
 
     private fun open(t: Tool) {
         cur?.stop(); cur = t
         val col = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
-        col.add(a.button("← Back") { menu() }.apply { setPadding(a.dp(14), 0, a.dp(14), 0) }, 0)
+        // Opened from a home tile: the header arrow / system Back leaves straight to the home screen.
+        if (!direct) col.add(a.button("← Back") { menu() }.apply { setPadding(a.dp(14), 0, a.dp(14), 0) }, 0)
         col.addView(t.view(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        root.removeAllViews(); root.addView(a.scroll(col)); root.applyTypeface(a.tf)
+        val sv = a.scroll(col); scrollView = sv
+        root.removeAllViews(); root.addView(sv); root.applyTypeface(a.tf)
+        if (direct) restoreScroll(sv)
     }
 }
 
-class GuardHome(a: MainActivity) : ToolHome(a, "Guard Suite", "Seven tools for your network, privacy and surroundings.", listOf(
+class GuardHome(a: MainActivity) : ToolHome(a, "Guard Suite", "Six tools for your network, privacy and surroundings.", listOf(
     Triple("LAN Guard", "Every device on your Wi-Fi, with alerts for new ones") { LanGuardSection(a) },
     Triple("Bug Sweep", "Hidden camera / listening device suspicion score") { BugSweepSection(a) },
     Triple("Device Finder", "Hot / cold tracker for lost earbuds, watches, trackers") { DeviceFinderSection(a) },
     Triple("Network Toolkit", "Speed test, ping, traceroute, DNS, port check") { NetToolkitSection(a) },
     Triple("App Privacy Audit", "Dangerous permissions, background apps, ad trackers") { AppAuditSection(a) },
-    Triple("Private Vault", "Fingerprint-locked encrypted photos, files, notes") { VaultSection(a) },
-    Triple("Sound Lab", "Decibel meter, live spectrum, noise alarm recorder") { SoundLabSection(a) }
+    Triple("Private Vault", "Fingerprint-locked encrypted photos, files, notes") { VaultSection(a) }
 ))
 
 class LabsHome(a: MainActivity) : ToolHome(a, "Labs", "Mapping, offline AI, automation, scripting, sharing, forensics and money.", listOf(

@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.rememberPersistedScroll
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -191,7 +192,7 @@ fun EncryptScreen() {
         )
     }
 
-    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberPersistedScroll("EncryptScreen1")), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("File encryptor", style = MaterialTheme.typography.headlineSmall)
         Text("AES-256-GCM, fully offline. Works on any file size.", style = MaterialTheme.typography.bodySmall)
         Button(enabled = !busy, onClick = { picker.launch(arrayOf("*/*")) }) { Text(if (file == null) "Choose file" else "Change file") }

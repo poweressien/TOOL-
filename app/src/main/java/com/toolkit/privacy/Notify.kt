@@ -18,10 +18,7 @@ object Notify {
     fun channels(ctx: Context) {
         if (Build.VERSION.SDK_INT < 26) return
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(NotificationChannel(CH_ALERTS, "Device alerts", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Pop-ups about background apps, data use, weak signal, missed calls and events"
-            enableVibration(true)
-        })
+        SoundCatalog.alertChannel(ctx, CH_ALERTS, "Device alerts")
         nm.createNotificationChannel(NotificationChannel(CH_STATUS, "Toolkit running", NotificationManager.IMPORTANCE_LOW).apply {
             description = "Shows while Site Guard or the Device Monitor is active"
             setShowBadge(false)
@@ -53,7 +50,7 @@ object Notify {
     fun alert(ctx: Context, id: Int, title: String, text: String, urgent: Boolean, tab: Int = 5, sub: Int = 3) {
         if (!canPost(ctx)) return
         channels(ctx)
-        val b = builder(ctx, CH_ALERTS).setSmallIcon(if (urgent) android.R.drawable.ic_dialog_alert else android.R.drawable.ic_dialog_info)
+        val b = builder(ctx, SoundCatalog.alertChannel(ctx, CH_ALERTS, "Device alerts")).setSmallIcon(if (urgent) android.R.drawable.ic_dialog_alert else android.R.drawable.ic_dialog_info)
             .setContentTitle(title).setContentText(text).setStyle(Notification.BigTextStyle().bigText(text))
             .setAutoCancel(true).setContentIntent(open(ctx, id, tab, sub))
         if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL)
