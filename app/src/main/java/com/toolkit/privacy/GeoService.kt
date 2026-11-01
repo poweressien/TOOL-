@@ -1,5 +1,6 @@
 package com.toolkit.privacy
 
+import com.toolkit.privacy.core.MasterSwitch
 import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent

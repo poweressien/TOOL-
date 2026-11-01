@@ -52,17 +52,6 @@ class RadarSection(private val a: MainActivity) {
             // the page is fully local: refuse to navigate anywhere else
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(v: WebView, req: WebResourceRequest): Boolean = true
-                // paint the radar page in the app theme
-                override fun onPageFinished(v: WebView, url: String?) {
-                    val t = com.toolkit.privacy.ThemeStore.current
-                    fun h(c: Int) = String.format("#%06X", c and 0xFFFFFF)
-                    val ln = androidx.core.graphics.ColorUtils.blendARGB(t.bg, t.text, 0.18f)
-                    val pn2 = androidx.core.graphics.ColorUtils.blendARGB(t.card, t.text, 0.08f)
-                    v.evaluateJavascript("(function(){var r=document.documentElement.style;" +
-                        "r.setProperty('--bg','" + h(t.bg) + "');r.setProperty('--pn','" + h(t.card) + "');r.setProperty('--pn2','" + h(pn2) + "');" +
-                        "r.setProperty('--ln','" + h(ln) + "');r.setProperty('--tx','" + h(t.text) + "');r.setProperty('--mu','" + h(t.sub) + "');" +
-                        "r.setProperty('--ac','" + h(t.accent) + "');})()", null)
-                }
             }
             loadUrl("file:///android_asset/radar/index.html")
         }

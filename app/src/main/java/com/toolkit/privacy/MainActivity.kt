@@ -6,25 +6,18 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import com.toolkit.privacy.core.AppTheme
+import com.toolkit.privacy.core.MasterSwitch
+import com.toolkit.privacy.core.ThemeState
+import com.toolkit.privacy.home.App
 
 /** Where an incoming intent (notification tap, share sheet) wants to land. */
 data class Route(val tab: Int, val sub: Int, val url: String? = null, val text: String? = null, val id: Long = System.nanoTime())
@@ -34,7 +27,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ThemeStore.init(this)
+        ThemeState.ensureLoaded(this)
         MasterSwitch.init(this)
         route.value = parse(intent)
         setContent { AppTheme { Surface { App(route.value) } } }

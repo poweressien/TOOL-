@@ -98,7 +98,7 @@ fun OrganizerScreen(asHome: Boolean = false) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (asHome) Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Home", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                OutlinedButton(onClick = { ctx.startActivity(Intent(ctx, MainActivity::class.java)) }) { Text("Toolkit") }
+                OutlinedButton(onClick = { ctx.startActivity(Intent(ctx, MainActivity::class.java)) }) { Text("🧰 Toolkit") }
             } else Text("Home Organizer", style = MaterialTheme.typography.headlineSmall)
             OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Search ${apps.size} apps") })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

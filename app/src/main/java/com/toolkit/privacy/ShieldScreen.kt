@@ -49,6 +49,7 @@ fun ShieldScreen() {
     }
 
     fun begin() {
+        Prefs.sp(ctx).edit().putString("shield_upstream", upstream).apply()
         ctx.startService(Intent(ctx, DnsShieldService::class.java).putExtra("upstream", upstream))
     }
 

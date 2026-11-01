@@ -10,14 +10,21 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 
-/** Colours come from the app-wide theme (Powder Black, Butter White, System or Custom). */
+/** Colours of the EKPE screens. They follow the app theme (Powder Black, Butter White, system or custom). */
 object C {
-    val BG: Int get() = com.toolkit.privacy.ThemeStore.current.bg
-    val CARD: Int get() = com.toolkit.privacy.ThemeStore.current.card
-    val ACC: Int get() = com.toolkit.privacy.ThemeStore.current.accent
-    val TXT: Int get() = com.toolkit.privacy.ThemeStore.current.text
-    val SUB: Int get() = com.toolkit.privacy.ThemeStore.current.sub
-    val ON_ACC: Int get() = com.toolkit.privacy.ThemeStore.current.onAccent
+    var BG = 0xFF121214.toInt()
+    var CARD = 0xFF1D1D21.toInt()
+    var ACC = 0xFFF2C94C.toInt()
+    var TXT = 0xFFFFF6DB.toInt()
+    var SUB = 0xFFB9B29E.toInt()
+    /** Text colour that is readable on top of ACC (button labels). */
+    var ONACC = 0xFF1A1400.toInt()
+    var LIGHT = false
+
+    fun load(ctx: Context) {
+        val p = com.toolkit.privacy.core.ThemeState.palette(ctx)
+        BG = p.bg; CARD = p.card; ACC = p.accent; TXT = p.text; SUB = p.sub; ONACC = p.onAccent; LIGHT = p.light
+    }
 }
 
 data class Row(val k: String, val v: String = "", val url: String? = null, val header: Boolean = false)
@@ -33,7 +40,7 @@ fun Context.tv(text: String, size: Float = 14f, color: Int = C.TXT, bold: Boolea
 }
 
 fun Context.button(text: String, onClick: () -> Unit) = Button(this).apply {
-    this.text = text; isAllCaps = false; setTextColor(C.ON_ACC)
+    this.text = text; isAllCaps = false; setTextColor(C.ONACC)
     background = round(C.ACC, dp(10)); setOnClickListener { onClick() }
     minHeight = 0; minimumHeight = dp(40)
 }

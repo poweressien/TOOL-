@@ -78,9 +78,9 @@ object WifiPro {
             ApDetail(
                 ssid = (r.SSID ?: "").ifBlank { "(hidden)" }, bssid = bssid, rssi = r.level, freq = r.frequency,
                 channel = channelOf(r.frequency), band = bandOf(r.frequency), widthMhz = width, centerMhz = center, standard = std,
-                security = secOf(caps), caps = caps, vendor = Oui.offline(bssid), distanceM = distance(r.frequency, r.level),
+                security = secOf(caps), caps = caps, vendor = MacVendor.offlineLookup(bssid), distanceM = distance(r.frequency, r.level),
                 wps = caps.contains("WPS"), connected = bssid == cur, ageSec = max(0L, (nowUs - r.timestamp) / 1_000_000),
-                randomBssid = bssid.isNotEmpty() && Oui.isRandom(bssid)
+                randomBssid = bssid.isNotEmpty() && MacVendor.isRandom(bssid)
             )
         }.distinctBy { it.bssid }.sortedByDescending { it.rssi }
     }
@@ -243,10 +243,4 @@ object WifiPro {
         val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         wm.configuredNetworks?.mapNotNull { it.SSID?.trim('"') } ?: emptyList()
     } catch (e: Exception) { emptyList() }
-}
-
-/** Offline router-maker lookup for scan results (no network inside the scan loop). */
-object Oui {
-    fun offline(bssid: String): String? = if (bssid.isBlank()) null else MacVendor.offlineLookup(bssid)
-    fun isRandom(bssid: String): Boolean = MacVendor.isRandom(bssid)
 }

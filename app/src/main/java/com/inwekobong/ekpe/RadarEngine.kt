@@ -94,17 +94,17 @@ object RadarEngine {
         h.post(tick)
     }
 
-    /** Stops scanning (master switch off). start() brings it back. */
+    /** True while the scanner loop is running. */
+    val active: Boolean get() = on
+
+    /** Stops the scan loop, the magnetometer and the BLE scan. start() can be called again later. */
     fun stop() {
         if (!on) return
         on = false
-        h.removeCallbacks(tick)
-        try { (ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager).unregisterListener(magL) } catch (e: Exception) { }
-        try {
-            if (bleOn) (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner?.stopScan(cb)
-        } catch (e: Exception) { }
+        runCatching { h.removeCallbacks(tick) }
+        runCatching { (ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager).unregisterListener(magL) }
+        runCatching { (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bluetoothLeScanner?.stopScan(cb) }
         bleOn = false
-        ticks = 0
     }
 
     // ---------- alerts ----------

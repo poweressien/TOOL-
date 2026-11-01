@@ -37,7 +37,6 @@ class UrlAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(e: AccessibilityEvent?) {
         val pkg = e?.packageName?.toString() ?: return
-        if (!MasterSwitch.isOn(this)) return
         if (!urlIds.containsKey(pkg)) return
         if (!Prefs.sp(this).getBoolean(Prefs.SG_AUTO, true) || !SiteGuardService.isRunning()) return
         val now = System.currentTimeMillis()

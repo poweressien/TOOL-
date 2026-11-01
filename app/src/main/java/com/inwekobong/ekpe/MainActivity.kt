@@ -11,10 +11,8 @@ import android.provider.MediaStore
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.core.view.WindowCompat
+import androidx.activity.addCallback
 import androidx.fragment.app.FragmentActivity
-import com.toolkit.privacy.MasterSwitch
-import com.toolkit.privacy.ThemeStore
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -40,60 +38,71 @@ class MainActivity : FragmentActivity() {
     private val saveLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { saveCb?.invoke(it) }
 
     private val names = listOf("Analyzer", "Intel", "Split", "Fonts", "Cloud", "Clock", "Tools", "Radar", "Guard", "Labs", "◀ Toolkit")
+    private val titles = listOf("Number Analyzer", "Entity Intel", "Split Screen", "Font Studio", "Cloud Gallery", "Floating Clock", "Extra Tools", "Radar", "Guard", "Labs")
     private val cache = HashMap<Int, View>()
     private lateinit var frame: FrameLayout
     private lateinit var tabs: LinearLayout
-    private lateinit var tabScroll: HorizontalScrollView
-
-    private var seenTheme = 0
+    private lateinit var titleTv: TextView
+    private var themeVersion = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ThemeStore.init(this)
-        seenTheme = ThemeStore.version
-        if (!MasterSwitch.isOn(this)) {   // master switch is off: EKPE tools must not run
-            toast("EKPE is paused. Turn the master switch on first.")
+        com.toolkit.privacy.core.MasterSwitch.init(this)
+        if (!com.toolkit.privacy.core.MasterSwitch.isOn(this)) {
+            toast("EKPE is switched off. Turn the master switch on from the home screen.")
             finish(); return
+        }
+        C.load(this)
+        themeVersion = com.toolkit.privacy.core.ThemeState.version
+        window.statusBarColor = C.CARD
+        window.navigationBarColor = C.BG
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(C.BG))
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = C.LIGHT; isAppearanceLightNavigationBars = C.LIGHT
         }
         tf = FontStore.load(prefs().getString("font_app", null))
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(C.BG) }
+        // Slim header: back to the home screen + the name of the tool that is open.
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
+            setBackgroundColor(C.CARD); setPadding(dp(6), dp(4), dp(14), dp(4))
+        }
+        header.addView(button("←") { backToToolkit() }.apply { background = round(0x00000000, dp(8)); setTextColor(C.TXT); textSize = 20f; setPadding(dp(14), 0, dp(14), 0) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        titleTv = tv("", 18f, C.TXT, true)
+        header.addView(titleTv, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        root.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         frame = FrameLayout(this)
         root.addView(frame, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setBackgroundColor(C.CARD) }
-        names.forEachIndexed { i, n ->
-            tabs.addView(button(n) { show(i) }.apply { background = round(0x00000000, dp(8)); setPadding(dp(14), 0, dp(14), 0) },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        tabScroll = HorizontalScrollView(this).apply { setBackgroundColor(C.CARD); isHorizontalScrollBarEnabled = false; addView(tabs) }
-        root.addView(tabScroll)
+        // The tab strip is kept (not shown) so show() keeps working exactly as before.
+        tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        names.forEachIndexed { i, n -> tabs.addView(button(n) { show(i) }) }
         setContentView(root)
-        val th = ThemeStore.current
-        window.statusBarColor = th.bg
-        window.navigationBarColor = th.card
-        WindowCompat.getInsetsController(window, root).apply { isAppearanceLightStatusBars = !th.dark; isAppearanceLightNavigationBars = !th.dark }
+        onBackPressedDispatcher.addCallback(this) { backToToolkit() }
         show(prefs().getInt("tab", 0))
         handleIntent(intent)
+        header.applyTypeface(tf)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!com.toolkit.privacy.core.MasterSwitch.isOn(this)) { finish(); return }
+        if (themeVersion != -1 && themeVersion != com.toolkit.privacy.core.ThemeState.version) recreate()
     }
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); handleIntent(intent) }
 
-    override fun onResume() {
-        super.onResume()
-        if (!MasterSwitch.isOn(this)) { finish(); return }          // paused from the main screen
-        if (ThemeStore.version != seenTheme) recreate()               // colours were changed in Settings
-    }
-
     private fun handleIntent(i: Intent?) {
+        if (!::frame.isInitialized) return
         i?.getStringExtra("delete_uri")?.let { requestDelete(Uri.parse(it)); i.removeExtra("delete_uri") }
-        i?.getIntExtra("tab", -1)?.takeIf { it >= 0 && it < names.size - 1 }?.let { t ->
+        val t = i?.getIntExtra("tab", -1) ?: -1
+        if (t >= 0 && t < names.size - 1) {
             show(t)
-            // a home-screen tile for one Guard / Labs tool opens that tool directly
-            i?.getStringExtra("tool")?.let { name ->
-                when (t) {
-                    8 -> guard?.openByTitle(name)
-                    9 -> labs?.openByTitle(name)
-                    else -> {}
-                }
+            // Home-screen tiles can open one tool of Guard (tab 8) or Labs (tab 9) directly.
+            val sub = i?.getIntExtra("sub", -1) ?: -1
+            if (sub >= 0) {
+                when (t) { 8 -> guard?.openAt(sub); 9 -> labs?.openAt(sub) }
+                i?.removeExtra("sub")
             }
         }
     }
@@ -107,6 +116,7 @@ class MainActivity : FragmentActivity() {
     private fun show(i: Int) {
         if (i == names.size - 1) { backToToolkit(); return }
         prefs().edit().putInt("tab", i).apply()
+        titleTv.text = titles[i]
         for (k in 0 until tabs.childCount) (tabs.getChildAt(k) as Button).setTextColor(if (k == i) C.ACC else C.TXT)
         val v = cache.getOrPut(i) {
             when (i) {

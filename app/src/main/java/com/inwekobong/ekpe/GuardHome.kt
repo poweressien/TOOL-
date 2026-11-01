@@ -68,8 +68,8 @@ open class ToolHome(
     fun view(): View { menu(); return root }
     fun stopAll() { cur?.stop() }
 
-    /** Opens one tool straight from the home screen tile. */
-    fun openByTitle(name: String) { items.firstOrNull { it.first == name }?.let { open(it.third()) } }
+    /** Opens the n-th tool straight away (used by the home screen tiles). */
+    fun openAt(index: Int) { items.getOrNull(index)?.let { open(it.third()) } }
 
     private fun menu() {
         cur?.stop(); cur = null

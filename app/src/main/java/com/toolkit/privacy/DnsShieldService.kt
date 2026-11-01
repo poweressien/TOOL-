@@ -97,8 +97,7 @@ class DnsShieldService : VpnService() {
             return START_NOT_STICKY
         }
         Blocklist.load(this)
-        lastUpstream = intent?.getStringExtra("upstream") ?: "1.1.1.1"
-        startShield(lastUpstream)
+        startShield(intent?.getStringExtra("upstream") ?: "1.1.1.1")
         return START_NOT_STICKY
     }
 
@@ -250,7 +249,5 @@ class DnsShieldService : VpnService() {
 
     companion object {
         const val ACTION_STOP = "com.toolkit.privacy.STOP_SHIELD"
-        /** Resolver in use, so the master switch can bring the shield back with the same one. */
-        @Volatile var lastUpstream = "1.1.1.1"
     }
 }

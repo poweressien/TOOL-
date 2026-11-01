@@ -78,7 +78,7 @@ class IntelSection(private val a: MainActivity) {
     private fun keysDialog() {
         val sp = a.prefs()
         val box = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL; setPadding(a.dp(20), a.dp(10), a.dp(20), 0) }
-        fun field(h: String, k: String) = a.edit(h).apply { setText(sp.getString(k, "")); setTextColor(0xFF000000.toInt()); setHintTextColor(0xFF777777.toInt()); setBackgroundColor(0x11000000) }.also { box.add(it, 6) }
+        fun field(h: String, k: String) = a.edit(h).apply { setText(sp.getString(k, "")); setTextColor(C.TXT); setHintTextColor(C.SUB); setBackgroundColor(0x22808080) }.also { box.add(it, 6) }
         val f1 = field("SerpAPI key", "k_serp"); val f2 = field("Google CSE key", "k_cse")
         val f3 = field("Google CSE cx", "k_cx"); val f4 = field("Brave Search key", "k_brave")
         AlertDialog.Builder(a).setTitle("Search API keys (optional)").setView(box)

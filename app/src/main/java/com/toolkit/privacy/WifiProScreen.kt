@@ -84,7 +84,7 @@ fun WifiProScreen() {
                 Kv("Wi-Fi standard", l.standard)
                 Kv("Security", l.security)
                 Kv("Router BSSID", l.bssid, true)
-                Oui.offline(l.bssid)?.let { Kv("Router maker", it) }
+                MacVendor.offlineLookup(l.bssid)?.let { Kv("Router maker", it) }
                 Kv("Your IP", l.ip, true)
                 Kv("Gateway", l.gateway, true)
                 Kv("Subnet mask", l.netmask, true)
