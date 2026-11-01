@@ -28,6 +28,7 @@ class MockLocationService : Service() {
         /** Last position that was being fed, so the master switch can resume it. */
         @Volatile var lastLat = 0.0
         @Volatile var lastLon = 0.0
+        val state = MutableStateFlow("Stopped")
     }
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -105,7 +106,4 @@ class MockLocationService : Service() {
         super.onDestroy()
     }
 
-    companion object {
-        val state = MutableStateFlow("Stopped")
-    }
 }

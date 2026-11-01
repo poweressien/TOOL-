@@ -244,3 +244,9 @@ object WifiPro {
         wm.configuredNetworks?.mapNotNull { it.SSID?.trim('"') } ?: emptyList()
     } catch (e: Exception) { emptyList() }
 }
+
+/** Offline router-maker lookup for scan results (no network inside the scan loop). */
+object Oui {
+    fun offline(bssid: String): String? = if (bssid.isBlank()) null else MacVendor.offlineLookup(bssid)
+    fun isRandom(bssid: String): Boolean = MacVendor.isRandom(bssid)
+}
