@@ -28,6 +28,7 @@ import kotlinx.coroutines.withContext
 
 private fun sigColor(rssi: Int) = apSigColor(rssi)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("DEPRECATION")
 @Composable
 fun WifiProScreen() {
@@ -278,7 +279,7 @@ fun WifiProScreen() {
                 else -> matched.sortedByDescending { it.rssi }
             }
             list.forEach { ap ->
-                Card(Modifier.fillMaxWidth(), onClick = { detail = ap.bssid }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Card(onClick = { detail = ap.bssid }, modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Row {
                             Text(ap.ssid + if (ap.connected) "  ✓" else "", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
